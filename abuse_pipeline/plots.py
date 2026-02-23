@@ -1,39 +1,40 @@
 from __future__ import annotations
+
 import os
 
 import matplotlib
-matplotlib.use("Agg")  # GUI 백엔드 방지
-
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-
-from .common import *
-from .text import tokenize_korean
-import matplotlib
-import squarify
-import matplotlib.pyplot as plt
+matplotlib.use("Agg")  # GUI(TkAgg) 비활성화: 저장 전용 백엔드
 import matplotlib.patheffects as pe
 import matplotlib.colors as mcolors
+import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+try:
+    import squarify
+except Exception:
+    squarify = None
+
 from matplotlib.lines import Line2D
 from matplotlib import font_manager
 from matplotlib.patches import Rectangle
-# plots.py (파일 최상단, pyplot import 전에!)
 
-import os
-
-import matplotlib
-matplotlib.use("Agg")  # ✅ GUI(TkAgg) 비활성화: 저장 전용 백엔드
-
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
+from .common import *
+from .text import tokenize_korean
 
 
 def _force_default_font():
-    # Windows: Malgun Gothic
-    fp = r"C:\Windows\Fonts\malgun.ttf"
-    if os.path.exists(fp):
-        font_name = fm.FontProperties(fname=fp).get_name()
-        plt.rcParams["font.family"] = font_name
+    # Cross-platform: prefer commonly available Korean fonts.
+    candidates = [
+        r"C:\Windows\Fonts\malgun.ttf",
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        "/Library/Fonts/AppleGothic.ttf",
+        "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+        "/Library/Fonts/NanumGothic.ttf",
+    ]
+    for fp in candidates:
+        if fp and os.path.exists(fp):
+            font_name = fm.FontProperties(fname=fp).get_name()
+            plt.rcParams["font.family"] = font_name
+            break
     plt.rcParams["axes.unicode_minus"] = False
 
 _force_default_font()
@@ -127,13 +128,17 @@ def set_korean_font(font_path: str | None = None):
         candidates.append(font_path)
     plt.rcParams["axes.unicode_minus"] = False
 
-    # 2) common windows fonts
+    # 2) common platform fonts (Windows/macOS)
     candidates += [
         r"C:\Windows\Fonts\malgun.ttf",       # 맑은 고딕
         r"C:\Windows\Fonts\malgunsl.ttf",     # 맑은 고딕 Semilight
         r"C:\Windows\Fonts\NanumGothic.ttf",  # (있으면)
         r"C:\Windows\Fonts\batang.ttc",       # 바탕
         r"C:\Windows\Fonts\gulim.ttc",        # 굴림
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        "/Library/Fonts/AppleGothic.ttf",
+        "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+        "/Library/Fonts/NanumGothic.ttf",
     ]
 
     chosen = None
@@ -146,8 +151,14 @@ def set_korean_font(font_path: str | None = None):
         font_name = fm.FontProperties(fname=chosen).get_name()
         plt.rcParams["font.family"] = font_name
     else:
-        # fallback: don't crash, but warn
-        print("[WARN] Korean font not found. Install Malgun Gothic or provide font_path.")
+        available = {f.name for f in fm.fontManager.ttflist}
+        for name in ["AppleGothic", "NanumGothic", "Malgun Gothic", "Noto Sans CJK KR"]:
+            if name in available:
+                plt.rcParams["font.family"] = name
+                break
+        else:
+            # fallback: don't crash, but warn
+            print("[WARN] Korean font not found. Install a Korean font or provide font_path.")
 
     plt.rcParams["axes.unicode_minus"] = False
 
@@ -192,6 +203,9 @@ def plot_treemap_dynamic_v2(
     """
     트리맵을 그리고, 실제로 포함된 단어들의 통계 정보를 CSV로 저장합니다.
     """
+    if squarify is None:
+        print("[TREEMAP] squarify 미설치 → 트리맵 생성을 건너뜁니다. (`pip install squarify`)")
+        return False
 
     # --- [폰트 설정] ---
     if font_path and os.path.exists(font_path):
@@ -381,12 +395,9 @@ def plot_treemap_from_counts(
     import numpy as np
     import matplotlib.pyplot as plt
 
-    try:
-        import squarify  # treemap layout
-    except ImportError as e:
-        raise ImportError(
-            "treemap을 그리려면 squarify가 필요합니다. `pip install squarify` 후 다시 실행하세요."
-        ) from e
+    if squarify is None:
+        print("[TREEMAP] squarify 미설치 → 트리맵 생성을 건너뜁니다. (`pip install squarify`)")
+        return
 
     # --- 1) 정리: 유효한 (word, count)만 ---
     items = []

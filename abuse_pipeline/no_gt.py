@@ -21,24 +21,22 @@ from pathlib import Path
 from collections import defaultdict
 import pandas as pd
 
-# ── 프로젝트 모듈 import (3단계 폴백) ──
+# ── 프로젝트 모듈 import (패키지/단독 실행 폴백) ──
 import sys
 
 _this = Path(__file__).resolve()
-_project_root = _this.parent
-# 프로젝트 루트 자동 탐색 (Childeren/ 하위 어디서든 실행 가능)
-for _candidate in [_this.parent, _this.parent.parent, _this.parent.parent.parent]:
-    if (_candidate / "v28_refactor").exists():
-        _project_root = _candidate
-        break
+_project_root = _this.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
-sys.path.insert(0, str(_project_root))
-
-from v28_refactor.abuse_pipeline import common as C
-from v28_refactor.abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
-from v28_refactor.abuse_pipeline.compare_abuse_labels import (
-    extract_gt_abuse_types_from_info,
-)
+try:
+    from . import common as C
+    from .labels import classify_child_group, classify_abuse_main_sub
+    from .compare_abuse_labels import extract_gt_abuse_types_from_info
+except ImportError:
+    from abuse_pipeline import common as C
+    from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
+    from abuse_pipeline.compare_abuse_labels import extract_gt_abuse_types_from_info
 
 ABUSE_ORDER = C.ABUSE_ORDER  # ["성학대","신체학대","정서학대","방임"]
 

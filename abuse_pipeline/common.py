@@ -16,12 +16,23 @@ import pandas as pd
 # 0. Project paths (package lives under <ROOT>/abuse_pipeline)
 # =========================================================
 def _find_project_root(start: Path) -> Path:
-    p = start
-    for _ in range(10):  # 위로 10단계까지만 탐색
-        if (p / "data").exists():
-            return p
+    p = start.resolve()
+    if p.is_file():
         p = p.parent
-    return start.parents[2]  # fallback
+
+    # 패키지 레이아웃(<ROOT>/abuse_pipeline/common.py)을 우선 신뢰한다.
+    if p.name == "abuse_pipeline" and (p.parent / "abuse_pipeline").is_dir():
+        return p.parent
+
+    # 보조 탐색: 상위에서 abuse_pipeline 패키지 루트를 찾는다.
+    cur = p
+    for _ in range(10):
+        if (cur / "abuse_pipeline").is_dir():
+            return cur
+        cur = cur.parent
+
+    # 최종 fallback은 common.py의 상위 디렉토리
+    return p.parent
 
 ROOT_DIR = _find_project_root(Path(__file__).resolve())
 BASE_DIR = str(ROOT_DIR)
@@ -344,9 +355,6 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
     global CA_PROB_DIR, BRIDGE_PROB_ABLATION_DIR, BRIDGE_DELTA_DIR
 
     base_dir = base_dir or BASE_DIR
-    print("[DEBUG] configure_output_dirs called with subset_name =", repr(subset_name))
-    print("[DEBUG] looks_like_path =", _looks_like_path(subset_name))
-
     # Backward compatible: if caller passes an explicit path, respect it.
     if _looks_like_path(subset_name):
         out_root = subset_name

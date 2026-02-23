@@ -93,36 +93,33 @@ if not _IMPORT_OK:
         from .compare_abuse_labels import extract_gt_abuse_types_from_info
         from .labels import classify_child_group
         _IMPORT_OK = True
-        print("[IMPORT] 상대 import 성공")
     except ImportError:
         pass
 
-# 폴백 2: 절대 import (PyCharm 직접 실행 시)
+# 폴백 2: 절대 import (프로젝트 루트가 sys.path인 경우)
 if not _IMPORT_OK:
     try:
-        from v28_refactor.abuse_pipeline.compare_abuse_labels import (
+        from abuse_pipeline.compare_abuse_labels import (
             extract_gt_abuse_types_from_info,
         )
-        from v28_refactor.abuse_pipeline.labels import classify_child_group
+        from abuse_pipeline.labels import classify_child_group
         _IMPORT_OK = True
-        print("[IMPORT] 절대 import 성공")
     except ImportError:
         pass
 
 # 폴백 3: sys.path 수동 추가
 if not _IMPORT_OK:
     _this = Path(__file__).resolve()
-    for _p in [_this.parent, _this.parent.parent, _this.parent.parent.parent]:
-        s = str(_p)
-        if s not in sys.path:
-            sys.path.insert(0, s)
+    _proj_root = _this.parent.parent
+    s = str(_proj_root)
+    if s not in sys.path:
+        sys.path.insert(0, s)
     try:
-        from v28_refactor.abuse_pipeline.compare_abuse_labels import (
+        from abuse_pipeline.compare_abuse_labels import (
             extract_gt_abuse_types_from_info,
         )
-        from v28_refactor.abuse_pipeline.labels import classify_child_group
+        from abuse_pipeline.labels import classify_child_group
         _IMPORT_OK = True
-        print("[IMPORT] sys.path 추가 후 import 성공")
     except ImportError:
         pass
 

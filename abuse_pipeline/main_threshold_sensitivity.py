@@ -64,17 +64,21 @@ warnings.filterwarnings("ignore")
 
 # ── labels.py에서 정서군 분류 및 학대유형 분류 함수 import (3-tier fallback) ──
 try:
-    from v28_refactor.abuse_pipeline.labels import classify_child_group                    # 패키지 내부 실행
-    from v28_refactor.abuse_pipeline.labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
+    from .labels import classify_child_group
+    from .labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
 except ImportError:
     try:
-        from labels import classify_child_group                 # 독립 실행 (같은 디렉토리)
-        from labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
+        from abuse_pipeline.labels import classify_child_group
+        from abuse_pipeline.labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
     except ImportError:
-        raise ImportError(
-            "labels.py를 찾을 수 없습니다. "
-            "main_threshold_sensitivity.py와 같은 디렉토리에 labels.py가 있는지 확인하세요."
-        )
+        try:
+            from labels import classify_child_group
+            from labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
+        except ImportError as e:
+            raise ImportError(
+                "labels.py를 찾을 수 없습니다. "
+                "abuse_pipeline 패키지로 실행하거나 labels.py와 같은 디렉토리에서 실행하세요."
+            ) from e
 
 # ═══════════════════════════════════════════════════════════════
 #  0. 상수 정의

@@ -3,7 +3,10 @@ from __future__ import annotations
 import os
 import json
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud
+try:
+    from wordcloud import WordCloud
+except Exception:
+    WordCloud = None
 
 import numpy as np
 import pandas as pd
@@ -81,6 +84,8 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
 
     # 워드클라우드/플롯 공통 폰트 경로
     font_path = r"C:\Windows\Fonts\malgun.ttf"  # Windows 기준
+    if WordCloud is None:
+        print("[WARN] wordcloud 미설치 → 워드클라우드 이미지는 생성하지 않고 표/통계만 저장합니다.")
 
     # -------------------------------------------------
     # (A) doc-level abuse × 단어 테이블 + 라벨 셔플 퍼뮤테이션
@@ -488,23 +493,26 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
 
             cmap = "Reds" if g == "부정" else ("Greys" if g == "평범" else "Blues")
 
-            wc = WordCloud(
-                font_path=font_path,
-                width=1200,
-                height=900,
-                background_color="white",
-                colormap=cmap,
-            ).generate_from_frequencies(freq_dict)
+            if WordCloud is None:
+                print(f"[VALENCE WC] wordcloud 미설치 → 정서군 {g} 워드클라우드 생성을 건너뜁니다.")
+            else:
+                wc = WordCloud(
+                    font_path=font_path,
+                    width=1200,
+                    height=900,
+                    background_color="white",
+                    colormap=cmap,
+                ).generate_from_frequencies(freq_dict)
 
-            plt.figure(figsize=(9, 7))
-            plt.imshow(wc, interpolation="bilinear")
-            plt.axis("off")
-            plt.title(f"{g} 정서군 워드클라우드 (chi2·log-odds 기반)", fontsize=18)
+                plt.figure(figsize=(9, 7))
+                plt.imshow(wc, interpolation="bilinear")
+                plt.axis("off")
+                plt.title(f"{g} 정서군 워드클라우드 (chi2·log-odds 기반)", fontsize=18)
 
-            out_wc_path = os.path.join(C.VALENCE_FIG_DIR, f"wordcloud_valence_{g}_chi_logodds.png")
-            plt.savefig(out_wc_path, dpi=200, bbox_inches="tight")
-            plt.close()
-            print(f"[저장] 정서군 {g} 워드클라우드 -> {out_wc_path}")
+                out_wc_path = os.path.join(C.VALENCE_FIG_DIR, f"wordcloud_valence_{g}_chi_logodds.png")
+                plt.savefig(out_wc_path, dpi=200, bbox_inches="tight")
+                plt.close()
+                print(f"[저장] 정서군 {g} 워드클라우드 -> {out_wc_path}")
 
             want_cols = ["group", "word", "count_group", "log_odds", "chi2", "p_value", "p_fdr_bh"]
             have_cols = [c for c in want_cols if c in wc_words.columns]
@@ -523,19 +531,6 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
             out_csv_all = os.path.join(C.VALENCE_STATS_DIR, f"table_valence_logodds_top{TOP_N_TABLE_VALENCE}.csv")
             table_valence_all.to_csv(out_csv_all, encoding="utf-8-sig", index=False)
             print(f"[저장] 정서군 전체 상위 단어 통합 표 -> {out_csv_all}")
-        w = "엄마"
-
-        print("counts (ALL):")
-        for g in ["부정", "평범", "긍정"]:
-            if g in df_valence_counts.columns and w in df_valence_counts.index:
-                print(g, int(df_valence_counts.loc[w, g]))
-            else:
-                print(g, None)
-
-        # valence_stats에 log_odds가 들어있다는 가정
-        print("\nlog_odds (ALL):")
-        tmp = valence_stats[(valence_stats["word"] == w)]
-        print(tmp[["group", "log_odds"]].drop_duplicates())
 
         # Doc-level valence 교차표 + Spearman
         allowed_groups_doc = {"부정"} if only_negative else None
@@ -884,26 +879,29 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
                 else "Reds"
             )
 
-            wc = WordCloud(
-                font_path=font_path,
-                width=1200,
-                height=900,
-                background_color="white",
-                colormap=cmap,
-            ).generate_from_frequencies(freq_dict)
+            if WordCloud is None:
+                print(f"[ABUSE WC] wordcloud 미설치 → 학대유형 {abuse_name} 워드클라우드 생성을 건너뜁니다.")
+            else:
+                wc = WordCloud(
+                    font_path=font_path,
+                    width=1200,
+                    height=900,
+                    background_color="white",
+                    colormap=cmap,
+                ).generate_from_frequencies(freq_dict)
 
-            plt.figure(figsize=(9, 7))
-            plt.imshow(wc, interpolation="bilinear")
-            plt.axis("off")
-            plt.title(f"{abuse_name} 워드클라우드 (chi2·log-odds 기반)", fontsize=18)
+                plt.figure(figsize=(9, 7))
+                plt.imshow(wc, interpolation="bilinear")
+                plt.axis("off")
+                plt.title(f"{abuse_name} 워드클라우드 (chi2·log-odds 기반)", fontsize=18)
 
-            out_wc_path = os.path.join(
-                C.ABUSE_FIG_DIR,
-                f"wordcloud_abuse_{abuse_name}_clinical_chi_logodds.png",
-            )
-            plt.savefig(out_wc_path, dpi=200, bbox_inches="tight")
-            plt.close()
-            print(f"[저장] {abuse_name} 워드클라우드 -> {out_wc_path}")
+                out_wc_path = os.path.join(
+                    C.ABUSE_FIG_DIR,
+                    f"wordcloud_abuse_{abuse_name}_clinical_chi_logodds.png",
+                )
+                plt.savefig(out_wc_path, dpi=200, bbox_inches="tight")
+                plt.close()
+                print(f"[저장] {abuse_name} 워드클라우드 -> {out_wc_path}")
 
             want_cols = ["group", "word", "count", "count_abuse", "log_odds", "chi2", "p_value", "p_fdr_bh"]
             have_cols = [c for c in want_cols if c in wc_words.columns]

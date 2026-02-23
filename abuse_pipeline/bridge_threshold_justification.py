@@ -73,17 +73,36 @@ try:
         BRIDGE_P_CONFIGS,
     )
 except ImportError:
-    # 단독 실행 또는 PyCharm에서 직접 열 때
-    import common as C
-    from common import (
-        ABUSE_ORDER,
-        ABUSE_LABEL_EN,
-        BRIDGE_MIN_P1,
-        BRIDGE_MIN_P2,
-        BRIDGE_MAX_GAP,
-        BRIDGE_MIN_COUNT,
-        BRIDGE_P_CONFIGS,
-    )
+    try:
+        from abuse_pipeline import common as C
+        from abuse_pipeline.common import (
+            ABUSE_ORDER,
+            ABUSE_LABEL_EN,
+            BRIDGE_MIN_P1,
+            BRIDGE_MIN_P2,
+            BRIDGE_MAX_GAP,
+            BRIDGE_MIN_COUNT,
+            BRIDGE_P_CONFIGS,
+        )
+    except ImportError:
+        import sys
+        from pathlib import Path
+
+        _this = Path(__file__).resolve()
+        _proj_root = _this.parent.parent
+        if str(_proj_root) not in sys.path:
+            sys.path.insert(0, str(_proj_root))
+
+        from abuse_pipeline import common as C
+        from abuse_pipeline.common import (
+            ABUSE_ORDER,
+            ABUSE_LABEL_EN,
+            BRIDGE_MIN_P1,
+            BRIDGE_MIN_P2,
+            BRIDGE_MAX_GAP,
+            BRIDGE_MIN_COUNT,
+            BRIDGE_P_CONFIGS,
+        )
 
 
 # ═══════════════════════════════════════════════════════════════
