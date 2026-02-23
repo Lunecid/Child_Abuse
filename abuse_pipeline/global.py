@@ -11,7 +11,10 @@ import matplotlib
 matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
-from wordcloud import WordCloud
+try:
+    from wordcloud import WordCloud
+except Exception:
+    WordCloud = None
 
 # =========================================================
 # 0. 경로 & 기본 설정
@@ -72,13 +75,31 @@ ABUSE_ORDER = ["방임", "정서학대", "신체학대", "성학대"]
 
 MIN_DOC_COUNT = 5
 
-# 폰트
-font_path = r"C:\Windows\Fonts\malgun.ttf"
-if os.path.exists(font_path):
+# 폰트 (Windows/macOS 우선)
+font_candidates = [
+    r"C:\Windows\Fonts\malgun.ttf",
+    "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+    "/Library/Fonts/AppleGothic.ttf",
+    "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+    "/Library/Fonts/NanumGothic.ttf",
+]
+font_path = None
+for _fp in font_candidates:
+    if os.path.exists(_fp):
+        font_path = _fp
+        break
+
+if font_path:
     font_name = font_manager.FontProperties(fname=font_path).get_name()
     plt.rcParams["font.family"] = font_name
 else:
-    print(f"[WARN] {font_path} 를 찾지 못했습니다. 기본 폰트로 진행합니다.")
+    available = {f.name for f in font_manager.fontManager.ttflist}
+    for name in ["AppleGothic", "NanumGothic", "Malgun Gothic", "Noto Sans CJK KR"]:
+        if name in available:
+            plt.rcParams["font.family"] = name
+            break
+    else:
+        print("[WARN] Korean font not found. 기본 폰트로 진행합니다.")
 plt.rcParams["axes.unicode_minus"] = False
 
 # SciPy (점근 p 필요하면)

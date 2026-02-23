@@ -83,20 +83,20 @@ except ImportError:
 # ── 프로젝트 모듈 import (3단계 폴백) ──
 _IMPORT_OK = False
 try:
-    from abuse_pipeline import common as C
-    from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
-    from abuse_pipeline.text import extract_child_speech, tokenize_korean
+    from . import common as C
+    from .labels import classify_child_group, classify_abuse_main_sub
+    from .text import extract_child_speech, tokenize_korean
     _IMPORT_OK = True
 except ImportError:
     pass
 
 if not _IMPORT_OK:
     try:
-        from v28_refactor.abuse_pipeline import common as C
-        from v28_refactor.abuse_pipeline.labels import (
+        from abuse_pipeline import common as C
+        from abuse_pipeline.labels import (
             classify_child_group, classify_abuse_main_sub,
         )
-        from v28_refactor.abuse_pipeline.text import (
+        from abuse_pipeline.text import (
             extract_child_speech, tokenize_korean,
         )
         _IMPORT_OK = True
@@ -106,15 +106,16 @@ if not _IMPORT_OK:
 if not _IMPORT_OK:
     from pathlib import Path as _Path
     _this_dir = _Path(__file__).resolve().parent
-    for _p in [str(_this_dir), str(_this_dir.parent), str(_this_dir.parent.parent)]:
-        if _p not in sys.path:
-            sys.path.insert(0, _p)
+    _proj_root = _this_dir.parent
+    _p = str(_proj_root)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
     try:
-        from v28_refactor.abuse_pipeline import common as C
-        from v28_refactor.abuse_pipeline.labels import (
+        from abuse_pipeline import common as C
+        from abuse_pipeline.labels import (
             classify_child_group, classify_abuse_main_sub,
         )
-        from v28_refactor.abuse_pipeline.text import (
+        from abuse_pipeline.text import (
             extract_child_speech, tokenize_korean,
         )
         _IMPORT_OK = True

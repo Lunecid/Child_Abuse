@@ -71,19 +71,19 @@ if not _IMPORT_OK:
 # ── 폴백 2: 절대 경로 import (PyCharm 직접 실행, 프로젝트 루트가 sys.path) ──
 if not _IMPORT_OK:
     try:
-        from v28_refactor.abuse_pipeline import common as C
-        from v28_refactor.abuse_pipeline.labels import (
+        from abuse_pipeline import common as C
+        from abuse_pipeline.labels import (
             classify_child_group, classify_abuse_main_sub,
         )
-        from v28_refactor.abuse_pipeline.text import (
+        from abuse_pipeline.text import (
             extract_child_speech, tokenize_korean,
         )
-        from v28_refactor.abuse_pipeline.compare_abuse_labels import (
+        from abuse_pipeline.compare_abuse_labels import (
             extract_gt_abuse_types_from_info,
             normalize_abuse_label,
             DEFAULT_ABUSE_ORDER,
         )
-        from v28_refactor.abuse_pipeline.stats import (
+        from abuse_pipeline.stats import (
             compute_log_odds, compute_chi_square, add_bh_fdr,
             compute_prob_bridge_for_words,
         )
@@ -95,26 +95,25 @@ if not _IMPORT_OK:
 if not _IMPORT_OK:
     import sys
     from pathlib import Path as _Path
-    _this_dir  = _Path(__file__).resolve().parent       # abuse_pipeline/
-    _v28_dir   = _this_dir.parent                       # v28_refactor/
-    _proj_root = _v28_dir.parent                        # Childeren/
-    for _p in [str(_proj_root), str(_v28_dir), str(_this_dir)]:
+    _this_dir = _Path(__file__).resolve().parent
+    _proj_root = _this_dir.parent
+    for _p in [str(_proj_root), str(_this_dir)]:
         if _p not in sys.path:
             sys.path.insert(0, _p)
 
-    from v28_refactor.abuse_pipeline import common as C
-    from v28_refactor.abuse_pipeline.labels import (
+    from abuse_pipeline import common as C
+    from abuse_pipeline.labels import (
         classify_child_group, classify_abuse_main_sub,
     )
-    from v28_refactor.abuse_pipeline.text import (
+    from abuse_pipeline.text import (
         extract_child_speech, tokenize_korean,
     )
-    from v28_refactor.abuse_pipeline.compare_abuse_labels import (
+    from abuse_pipeline.compare_abuse_labels import (
         extract_gt_abuse_types_from_info,
         normalize_abuse_label,
         DEFAULT_ABUSE_ORDER,
     )
-    from v28_refactor.abuse_pipeline.stats import (
+    from abuse_pipeline.stats import (
         compute_log_odds, compute_chi_square, add_bh_fdr,
         compute_prob_bridge_for_words,
     )

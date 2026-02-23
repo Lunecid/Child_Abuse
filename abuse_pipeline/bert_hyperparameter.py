@@ -47,15 +47,20 @@ import pandas as pd
 
 # ── 기존 모듈 import ──
 try:
-    from tfidf_vs_bert_comparision import (
+    from .tfidf_vs_bert_comparision import (
         prepare_classification_data,
         run_bert_classifier,
     )
     _IMPORT_OK = True
 except ImportError:
-    _IMPORT_OK = False
-    print("[ERROR] tfidf_vs_bert_comparison.py를 찾을 수 없습니다.")
-    print("        이 파일과 같은 디렉토리에 위치시켜 주세요.")
+    try:
+        from abuse_pipeline.tfidf_vs_bert_comparision import (
+            prepare_classification_data,
+            run_bert_classifier,
+        )
+        _IMPORT_OK = True
+    except ImportError:
+        _IMPORT_OK = False
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -125,7 +130,10 @@ def run_bert_grid_search(
         전체 탐색 결과 요약 테이블
     """
     if not _IMPORT_OK:
-        raise ImportError("tfidf_vs_bert_comparison.py를 먼저 import해야 합니다.")
+        raise ImportError(
+            "tfidf_vs_bert_comparision 모듈을 찾을 수 없습니다. "
+            "abuse_pipeline 패키지 경로에서 실행하세요."
+        )
 
     if abuse_order is None:
         abuse_order = ["성학대", "신체학대", "정서학대", "방임"]

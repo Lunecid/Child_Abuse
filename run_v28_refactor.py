@@ -1,34 +1,40 @@
 from __future__ import annotations
 
-import glob
-import os
+import argparse
 from pathlib import Path
-from abuse_pipeline import common as C
+
 from abuse_pipeline.pipeline import run_pipeline
-from abuse_pipeline.common import DATA_JSON_DIR
-data_dir = Path(DATA_JSON_DIR)
 
 
-def _collect_json_files(data_dir: str) -> list[str]:
-    paths = sorted(glob.glob(os.path.join(data_dir, "*.json")))
-    return [p for p in paths if os.path.isfile(p)]
+def _collect_json_files(data_dir: Path) -> list[str]:
+    return [str(p) for p in sorted(data_dir.glob("*.json")) if p.is_file()]
 
 
 def main():
-    project_root = Path(__file__).resolve().parent.parent  # .../Childeren
-    data_dir = project_root / "data"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=None,
+        help="JSON 파일들이 있는 디렉토리 경로 (기본값: <project_root>/data)",
+    )
+    args = parser.parse_args()
 
-    # ✅ 반드시 먼저 출력 디렉토리 세팅
-    C.configure_output_dirs(subset_name="NEG")   # 또는 out_root를 직접 지정해도 됨
+    project_root = Path(__file__).resolve().parent
+    data_dir = Path(args.data_dir).expanduser().resolve() if args.data_dir else (project_root / "data")
+    json_files = _collect_json_files(data_dir)
 
     print("========================================================================")
-    print("[RUN] subset = ALL (only_negative=False)")
-    print("[RUN] OUTPUT_DIR =", C.OUTPUT_DIR)  # ✅ C.OUTPUT_DIR로 확인
-    json_files = list(data_dir.glob("*.json"))
+    print("[RUN] data_dir =", data_dir)
     print("[RUN] JSON 파일 개수:", len(json_files))
     print("========================================================================")
 
-    run_pipeline(json_files, subset_name="NEG", only_negative=True)
+    if not json_files:
+        print(f"[WARN] JSON 파일이 없습니다: {data_dir}")
+        return
+
+    run_pipeline(json_files, subset_name="ALL", only_negative=False)
+    run_pipeline(json_files, subset_name="NEG_ONLY", only_negative=True)
 
 if __name__ == "__main__":
     main()

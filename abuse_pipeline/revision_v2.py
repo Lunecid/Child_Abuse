@@ -54,16 +54,15 @@ import pandas as pd
 def _bootstrap_syspath() -> None:
     """Add probable project roots to sys.path so that imports work in 3 modes:
 
-    1) python -m v28_refactor.abuse_pipeline.revision_appendix_runner
-    2) python v28_refactor/abuse_pipeline/revision_appendix_runner.py
+    1) python -m abuse_pipeline.revision_v2
+    2) python abuse_pipeline/revision_v2.py
     3) PyCharm 'Run file' from within abuse_pipeline
     """
     this_file = Path(__file__).resolve()
     abuse_dir = this_file.parent
-    v28_dir = abuse_dir.parent
-    proj_root = v28_dir.parent
+    proj_root = abuse_dir.parent
 
-    for p in [proj_root, v28_dir, abuse_dir]:
+    for p in [proj_root, abuse_dir]:
         ps = str(p)
         if ps not in sys.path:
             sys.path.insert(0, ps)
@@ -83,15 +82,15 @@ except Exception:
 
 if not _IMPORT_OK:
     try:
-        from v28_refactor.abuse_pipeline import common as C  # type: ignore
-        from v28_refactor.abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub  # type: ignore
-        from v28_refactor.abuse_pipeline.text import extract_child_speech, tokenize_korean  # type: ignore
-        from v28_refactor.abuse_pipeline.stats import compute_chi_square  # type: ignore
+        from abuse_pipeline import common as C  # type: ignore
+        from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub  # type: ignore
+        from abuse_pipeline.text import extract_child_speech, tokenize_korean  # type: ignore
+        from abuse_pipeline.stats import compute_chi_square  # type: ignore
         _IMPORT_OK = True
     except Exception as e:
         raise ImportError(
-            "abuse_pipeline import 실패. 이 파일을 v28_refactor/abuse_pipeline 아래에 두고 실행하거나, "
-            "python -m v28_refactor.abuse_pipeline.revision_appendix_runner 형태로 실행하세요. "
+            "abuse_pipeline import 실패. 이 파일을 프로젝트의 abuse_pipeline 아래에 두고 실행하거나, "
+            "python -m abuse_pipeline.revision_v2 형태로 실행하세요. "
             f"원인: {e}"
         )
 
