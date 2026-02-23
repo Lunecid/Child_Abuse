@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from abuse_pipeline.pipeline import run_pipeline
@@ -10,8 +11,17 @@ def _collect_json_files(data_dir: Path) -> list[str]:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=None,
+        help="JSON 파일들이 있는 디렉토리 경로 (기본값: <project_root>/data)",
+    )
+    args = parser.parse_args()
+
     project_root = Path(__file__).resolve().parent
-    data_dir = project_root / "data"
+    data_dir = Path(args.data_dir).expanduser().resolve() if args.data_dir else (project_root / "data")
     json_files = _collect_json_files(data_dir)
 
     print("========================================================================")

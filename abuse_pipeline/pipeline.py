@@ -1116,3 +1116,27 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
         abuse_order=C.ABUSE_ORDER,
         base_out_dir=revision_out,
     )
+
+    # =================================================
+    # 9. 논문용: ABUSE_NEG + GT 기반 다중라벨(main+sub) vs 단일라벨(main) 비교
+    # =================================================
+    if only_negative:
+        try:
+            from .neg_gt_multilabel_analysis import run_neg_gt_multilabel_study
+
+            paper_out = os.path.join(C.OUTPUT_DIR, "paper_neg_gt_multilabel")
+            os.makedirs(paper_out, exist_ok=True)
+            _ = run_neg_gt_multilabel_study(
+                json_files=[str(x) for x in json_files],
+                out_dir=paper_out,
+                gt_field="학대의심",
+                n_splits=5,
+                random_state=42,
+                threshold=0.5,
+            )
+        except Exception as e:
+            print(f"[NEG-GT-MULTI] 실행 실패: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("[NEG-GT-MULTI] only_negative=False 이므로 분석을 건너뜁니다.")
