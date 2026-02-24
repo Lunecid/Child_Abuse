@@ -6,12 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
-try:
-    from . import common as C
-    from .labels import classify_abuse_main_sub
-except ImportError:
-    from abuse_pipeline import common as C
-    from abuse_pipeline.labels import classify_abuse_main_sub
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_abuse_main_sub
 
 
 # -----------------------------

@@ -29,7 +29,7 @@ weighted_ca_extension.py
     α = 1.0 → 주와 부를 동등하게 반영
 
     try:
-        from .label_comparison_analysis import run_label_comparison_from_pipeline
+        from abuse_pipeline.analysis.label_comparsion_analysis import run_label_comparison_from_pipeline
 
         label_comp_out = os.path.join(C.OUTPUT_DIR, "label_comparison")
         os.makedirs(label_comp_out, exist_ok=True)
@@ -66,9 +66,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 # ─── 패키지 내부 import ───
-from . import common as C
-from .labels import classify_abuse_main_sub
-from .text import extract_child_speech, tokenize_korean
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
 
 # ─── 상수 (common.py에서 가져옴) ───
 ABUSE_ORDER = C.ABUSE_ORDER
@@ -110,7 +110,7 @@ def collect_child_records(
     -------
     list[dict] : 각 아동의 {child_id, main_abuse, sub_abuses, speech_tokens}
     """
-    from .labels import classify_child_group
+    from abuse_pipeline.core.labels import classify_child_group
 
     records = []
     for path in json_files:

@@ -68,7 +68,7 @@ ABUSE_LABEL_EN = {
     "정서학대": "Emotional",
     "방임":     "Neglect",
 }
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+from abuse_pipeline.core.common import SEVERITY_RANK as _SEVERITY_RANK
 
 # 표기 변형 → 표준형 정규화 맵
 _CANON_MAP = {
@@ -85,43 +85,9 @@ _CANON_MAP = {
 #  1. 프로젝트 모듈 Import — 3단계 폴백
 #     compare_abuse_labels.py의 extract_gt_abuse_types_from_info 사용
 # ════════════════════════════════════════════════════════════════
-_IMPORT_OK = False
-
-# 폴백 1: 상대 import (패키지 내부 실행 시)
-if not _IMPORT_OK:
-    try:
-        from .compare_abuse_labels import extract_gt_abuse_types_from_info
-        from .labels import classify_child_group
-        _IMPORT_OK = True
-    except ImportError:
-        pass
-
-# 폴백 2: 절대 import (프로젝트 루트가 sys.path인 경우)
-if not _IMPORT_OK:
-    try:
-        from abuse_pipeline.compare_abuse_labels import (
-            extract_gt_abuse_types_from_info,
-        )
-        from abuse_pipeline.labels import classify_child_group
-        _IMPORT_OK = True
-    except ImportError:
-        pass
-
-# 폴백 3: sys.path 수동 추가
-if not _IMPORT_OK:
-    _this = Path(__file__).resolve()
-    _proj_root = _this.parent.parent
-    s = str(_proj_root)
-    if s not in sys.path:
-        sys.path.insert(0, s)
-    try:
-        from abuse_pipeline.compare_abuse_labels import (
-            extract_gt_abuse_types_from_info,
-        )
-        from abuse_pipeline.labels import classify_child_group
-        _IMPORT_OK = True
-    except ImportError:
-        pass
+from abuse_pipeline.analysis.compare_abuse_labels import extract_gt_abuse_types_from_info
+from abuse_pipeline.core.labels import classify_child_group
+_IMPORT_OK = True
 
 # 폴백 4: 프로젝트 모듈 없이 로컬 함수로 대체
 if not _IMPORT_OK:

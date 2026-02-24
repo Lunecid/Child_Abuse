@@ -55,6 +55,18 @@ EMBED_PROJ_DIR: str | None = None
 CA_PROB_DIR: str | None = None
 BRIDGE_PROB_ABLATION_DIR: str | None = None
 BRIDGE_DELTA_DIR: str | None = None
+# 개별 분석 모듈별 출력 디렉토리
+NEG_GT_MULTILABEL_DIR: str | None = None
+MODEL_COMPARISON_DIR: str | None = None
+MAIN_THRESHOLD_DIR: str | None = None
+SUB_THRESHOLD_DIR: str | None = None
+LABEL_COMPARISON_DIR: str | None = None
+INTEGRATED_ANALYSIS_DIR: str | None = None
+COUNTING_DIR: str | None = None
+BORDERLINE_DIR: str | None = None
+NO_GT_DIR: str | None = None
+REVISION_DIR: str | None = None
+BERT_CA_DIR: str | None = None
 
 # =========================================================
 # 0-1. Orders & colors
@@ -67,6 +79,9 @@ VALENCE_COLORS = {
 }
 
 ABUSE_ORDER = ["성학대", "신체학대", "정서학대", "방임"]
+
+# 아동 안전 우선 위계 (결정론적 타이브레이킹) — 전역 공유
+SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
 # =========================================================
 # 0-1b. English labels for plots
 # =========================================================
@@ -129,6 +144,18 @@ BRIDGE_FILTER_CONFIGS = [
     }
     for cfg in BRIDGE_P_CONFIGS
 ]
+
+# =========================================================
+# 0-2a. 공유 TF-IDF 파라미터 (모든 분류기 모듈에서 참조)
+# =========================================================
+TFIDF_PARAMS = dict(
+    tokenizer=str.split,
+    preprocessor=None,
+    token_pattern=None,
+    ngram_range=(1, 2),
+    min_df=2,
+    max_features=20000,
+)
 
 TOP_K_VALENCE_WC = 120
 TOP_N_TABLE_VALENCE = 30
@@ -209,12 +236,35 @@ except Exception:
 try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.linear_model import LogisticRegression
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.svm import LinearSVC
     from sklearn.model_selection import StratifiedKFold, cross_val_score
-    from sklearn.metrics import cohen_kappa_score, classification_report, confusion_matrix
+    from sklearn.metrics import (
+        cohen_kappa_score,
+        classification_report,
+        confusion_matrix,
+        jaccard_score,
+        precision_recall_fscore_support,
+    )
+    from sklearn.preprocessing import MultiLabelBinarizer
     from sklearn.decomposition import PCA
+    from sklearn.pipeline import Pipeline as SklearnPipeline
     HAS_SKLEARN = True
 except Exception:
     HAS_SKLEARN = False
+
+# transformers + torch
+try:
+    import torch
+    from torch.utils.data import Dataset as TorchDataset, DataLoader
+    from transformers import (
+        AutoTokenizer,
+        AutoModelForSequenceClassification,
+        get_linear_schedule_with_warmup,
+    )
+    HAS_TRANSFORMERS = True
+except Exception:
+    HAS_TRANSFORMERS = False
 
 # gensim
 try:
@@ -353,6 +403,11 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
     global ABUSE_DIR, ABUSE_STATS_DIR, ABUSE_FIG_DIR
     global EMBED_DIR, EMBED_MODEL_DIR, EMBED_PROJ_DIR
     global CA_PROB_DIR, BRIDGE_PROB_ABLATION_DIR, BRIDGE_DELTA_DIR
+    global NEG_GT_MULTILABEL_DIR, MODEL_COMPARISON_DIR
+    global MAIN_THRESHOLD_DIR, SUB_THRESHOLD_DIR
+    global LABEL_COMPARISON_DIR, INTEGRATED_ANALYSIS_DIR
+    global COUNTING_DIR, BORDERLINE_DIR, NO_GT_DIR
+    global REVISION_DIR, BERT_CA_DIR
 
     base_dir = base_dir or BASE_DIR
     # Backward compatible: if caller passes an explicit path, respect it.
@@ -382,6 +437,19 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
     BRIDGE_PROB_ABLATION_DIR = os.path.join(OUTPUT_DIR, "pbridge_ablation")
     BRIDGE_DELTA_DIR = os.path.join(OUTPUT_DIR, "delta_bridge")
 
+    # 개별 분석 모듈별 출력 디렉토리
+    NEG_GT_MULTILABEL_DIR = os.path.join(OUTPUT_DIR, "neg_gt_multilabel")
+    MODEL_COMPARISON_DIR = os.path.join(OUTPUT_DIR, "model_comparison")
+    MAIN_THRESHOLD_DIR = os.path.join(OUTPUT_DIR, "main_threshold")
+    SUB_THRESHOLD_DIR = os.path.join(OUTPUT_DIR, "sub_threshold")
+    LABEL_COMPARISON_DIR = os.path.join(OUTPUT_DIR, "label_comparison")
+    INTEGRATED_ANALYSIS_DIR = os.path.join(OUTPUT_DIR, "integrated_analysis")
+    COUNTING_DIR = os.path.join(OUTPUT_DIR, "counting")
+    BORDERLINE_DIR = os.path.join(OUTPUT_DIR, "borderline")
+    NO_GT_DIR = os.path.join(OUTPUT_DIR, "no_gt_inspect")
+    REVISION_DIR = os.path.join(OUTPUT_DIR, "revision")
+    BERT_CA_DIR = os.path.join(OUTPUT_DIR, "bert_ca_validation")
+
     for d in [
         META_DIR,
         VALENCE_STATS_DIR,
@@ -393,5 +461,16 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
         CA_PROB_DIR,
         BRIDGE_PROB_ABLATION_DIR,
         BRIDGE_DELTA_DIR,
+        NEG_GT_MULTILABEL_DIR,
+        MODEL_COMPARISON_DIR,
+        MAIN_THRESHOLD_DIR,
+        SUB_THRESHOLD_DIR,
+        LABEL_COMPARISON_DIR,
+        INTEGRATED_ANALYSIS_DIR,
+        COUNTING_DIR,
+        BORDERLINE_DIR,
+        NO_GT_DIR,
+        REVISION_DIR,
+        BERT_CA_DIR,
     ]:
         os.makedirs(d, exist_ok=True)

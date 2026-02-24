@@ -25,33 +25,19 @@ import pandas as pd
 # ── 프로젝트 내부 모듈 import ──────────────────────────────────
 # 이 파일을 프로젝트 루트에 두고 실행하거나,
 # sys.path에 프로젝트 경로를 추가한 뒤 사용하세요.
-try:
-    from abuse_pipeline import common as C
-    from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
-    from abuse_pipeline.text import extract_child_speech, tokenize_korean
-    from abuse_pipeline.stats import (
-        compute_chi_square, add_bh_fdr, compute_log_odds,
-        compute_prob_bridge_for_words,
-    )
-    from abuse_pipeline.ca import run_abuse_ca_with_prob_bridges
-except ImportError:
-    # 패키지명이 다를 수 있으므로 fallback
-    pass
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
+from abuse_pipeline.stats.stats import (
+    compute_chi_square, add_bh_fdr, compute_log_odds,
+    compute_prob_bridge_for_words,
+)
+from abuse_pipeline.stats.ca import run_abuse_ca_with_prob_bridges
 
-# ── sklearn import (요구사항 3) ─────────────────────────────────
+# ── sklearn / 공유 코드 ─────────────────────────────────────────
 try:
-    from sklearn.pipeline import Pipeline
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-    from sklearn.svm import LinearSVC
-    from sklearn.model_selection import StratifiedKFold
-    from sklearn.metrics import (
-        classification_report,
-        confusion_matrix,
-        cohen_kappa_score,
-    )
-    HAS_SKLEARN = True
+    from abuse_pipeline.classifiers.classifier_utils import run_tfidf_classifiers_cv
+    HAS_SKLEARN = C.HAS_SKLEARN
 except ImportError:
     HAS_SKLEARN = False
 
@@ -67,8 +53,11 @@ except ImportError:
 # 요구사항 1: 라벨링 임계값 민감도 분석
 # ═══════════════════════════════════════════════════════════════
 
-# [FIX] 아동 안전 우선 위계 (재현성 보장용 타이브레이커)
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+# 공용 상수 참조 (common.py에서 중앙 관리)
+try:
+    _SEVERITY_RANK = C.SEVERITY_RANK
+except Exception:
+    _SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
 
 
 def classify_abuse_main_sub_with_threshold(
@@ -629,121 +618,45 @@ def run_multi_classifier_comparison(
     y = df[label_col].astype(str).values
     ids = df["ID"].values if "ID" in df.columns else np.arange(len(df))
 
-    # n_splits 안전 조정
-    min_count = int(df[label_col].value_counts().min())
-    actual_splits = min(n_splits, min_count)
-    if actual_splits < 2:
-        print(f"[MULTI-CLF] 최소 클래스 샘플 수가 {min_count}이라 분석이 불가합니다.")
+    # ── classifier_utils.py 의 공유 CV 함수 사용 ──
+    _name_map = {"LR": "LogisticRegression", "RF": "RandomForest", "SVM": "LinearSVM"}
+    cv_results = run_tfidf_classifiers_cv(
+        texts=texts, y=y, label_order=label_order,
+        clf_names=["LR", "RF", "SVM"],
+        n_splits=n_splits, random_state=random_state,
+    )
+    if not cv_results:
+        print("[MULTI-CLF] CV 결과 없음")
         return None
 
-    skf = StratifiedKFold(
-        n_splits=actual_splits, shuffle=True, random_state=random_state
-    )
-
-    # ── 분류기 정의 ──
-    classifiers = {
-        "LogisticRegression": LogisticRegression(
-            multi_class="multinomial", solver="lbfgs",
-            max_iter=300, n_jobs=-1, random_state=random_state,
-        ),
-        "RandomForest": RandomForestClassifier(
-            n_estimators=200, max_depth=None,
-            n_jobs=-1, random_state=random_state,
-        ),
-        "LinearSVM": LinearSVC(
-            max_iter=1000, random_state=random_state,
-            dual="auto",
-        ),
-    }
-
-    # TF-IDF 벡터라이저 (공통)
-    tfidf_params = dict(
-        tokenizer=str.split,
-        preprocessor=None,
-        token_pattern=None,
-        ngram_range=(1, 2),
-        min_df=2,
-        max_features=20000,
-    )
-
-    # ── CV 루프 ──
-    results = {}  # clf_name → {"all_true": [], "all_pred": [], "fold_metrics": []}
-    per_sample_preds = {}  # clf_name → {sample_idx: pred_label}
-
-    for clf_name, clf in classifiers.items():
-        print(f"\n[MULTI-CLF] {clf_name} 학습 중...")
-        all_true, all_pred = [], []
-        fold_rows = []
-        sample_predictions = {}
-
-        for fold_idx, (train_idx, test_idx) in enumerate(
-            skf.split(np.zeros(len(y)), y), start=1
-        ):
-            X_train = [texts[i] for i in train_idx]
-            y_train = y[train_idx]
-            X_test = [texts[i] for i in test_idx]
-            y_test = y[test_idx]
-
-            pipe = Pipeline([
-                ("tfidf", TfidfVectorizer(**tfidf_params)),
-                ("clf", deepcopy(clf)),
-            ])
-            pipe.fit(X_train, y_train)
-            pred = pipe.predict(X_test)
-
-            acc = float((pred == y_test).mean())
-            kappa = cohen_kappa_score(y_test, pred, labels=label_order)
-
-            fold_rows.append({
-                "classifier": clf_name,
-                "fold": fold_idx,
-                "n_train": len(train_idx),
-                "n_test": len(test_idx),
-                "accuracy": acc,
-                "cohen_kappa": kappa,
-            })
-
-            all_true.extend(list(y_test))
-            all_pred.extend(list(pred))
-
-            for i, idx in enumerate(test_idx):
-                sample_predictions[int(idx)] = pred[i]
-
-        results[clf_name] = {
-            "all_true": all_true,
-            "all_pred": all_pred,
-            "fold_metrics": fold_rows,
-        }
-        per_sample_preds[clf_name] = sample_predictions
+    # cv_results 키를 표시용 이름으로 변환
+    results = {}
+    per_sample_preds = {}
+    for cname, res in cv_results.items():
+        display_name = _name_map.get(cname, cname)
+        results[display_name] = res
+        per_sample_preds[display_name] = res["per_sample"]
 
     # ── (A) 분류기별 성능 요약 ──
     perf_rows = []
     cm_dfs = {}
 
     for clf_name, res in results.items():
-        overall_kappa = cohen_kappa_score(
+        overall_kappa = C.cohen_kappa_score(
             res["all_true"], res["all_pred"], labels=label_order
         )
         overall_acc = float(np.mean(
-            [r["accuracy"] for r in res["fold_metrics"]]
-        ))
-        overall_kappa_mean = float(np.mean(
-            [r["cohen_kappa"] for r in res["fold_metrics"]]
-        ))
-        overall_kappa_std = float(np.std(
-            [r["cohen_kappa"] for r in res["fold_metrics"]]
+            [t == p for t, p in zip(res["all_true"], res["all_pred"])]
         ))
 
         perf_rows.append({
             "classifier": clf_name,
             "mean_accuracy": overall_acc,
             "overall_kappa": overall_kappa,
-            "mean_kappa_cv": overall_kappa_mean,
-            "std_kappa_cv": overall_kappa_std,
         })
 
         # 혼동행렬
-        cm = confusion_matrix(
+        cm = C.confusion_matrix(
             res["all_true"], res["all_pred"], labels=label_order
         )
         cm_df = pd.DataFrame(
@@ -758,7 +671,7 @@ def run_multi_classifier_comparison(
         print(f"[저장] {clf_name} 혼동행렬 → {cm_path}")
 
         # classification report
-        report = classification_report(
+        report = C.classification_report(
             res["all_true"], res["all_pred"],
             labels=label_order, output_dict=True, zero_division=0,
         )
@@ -768,14 +681,6 @@ def run_multi_classifier_comparison(
         )
         report_df.to_csv(report_path, encoding="utf-8-sig")
 
-    # Fold summary 통합 저장
-    all_fold_rows = []
-    for res in results.values():
-        all_fold_rows.extend(res["fold_metrics"])
-    fold_df = pd.DataFrame(all_fold_rows)
-    fold_path = os.path.join(out_dir, f"fold_summary_all_classifiers_{label_name}.csv")
-    fold_df.to_csv(fold_path, encoding="utf-8-sig", index=False)
-
     # 성능 비교표 저장
     perf_df = pd.DataFrame(perf_rows)
     perf_path = os.path.join(out_dir, f"performance_comparison_{label_name}.csv")
@@ -783,7 +688,7 @@ def run_multi_classifier_comparison(
     print(f"\n[저장] 분류기 성능 비교표 → {perf_path}")
 
     # ── (B) 모호성 지대 분석: 공통 오분류 패턴 ──
-    clf_names = list(classifiers.keys())
+    clf_names = list(results.keys())
     all_indices = sorted(
         set.intersection(
             *[set(per_sample_preds[c].keys()) for c in clf_names]
@@ -863,7 +768,7 @@ def run_multi_classifier_comparison(
         preds1 = [per_sample_preds[c1][i] for i in all_indices]
         preds2 = [per_sample_preds[c2][i] for i in all_indices]
         try:
-            kappa_inter = cohen_kappa_score(preds1, preds2)
+            kappa_inter = C.cohen_kappa_score(preds1, preds2)
         except Exception:
             kappa_inter = np.nan
 
@@ -940,7 +845,7 @@ def run_all_revisions(
     df_abuse_counts: pd.DataFrame = None,
     df_text_abuse: pd.DataFrame = None,
     abuse_order: list[str] = None,
-    base_out_dir: str = "revision_output",
+    base_out_dir: str | None = None,
 ):
     """
     세 가지 리비전 요구사항을 한 번에 실행하는 통합 함수.
@@ -964,6 +869,8 @@ def run_all_revisions(
     if abuse_order is None:
         abuse_order = ["방임", "정서학대", "신체학대", "성학대"]
 
+    if base_out_dir is None:
+        base_out_dir = getattr(C, "REVISION_DIR", None) or "revision_output"
     os.makedirs(base_out_dir, exist_ok=True)
     results = {}
 

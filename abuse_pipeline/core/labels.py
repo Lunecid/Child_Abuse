@@ -165,7 +165,7 @@ def classify_child_group(
 # ─────────────────────────────────────────────────────────────
 # 숫자가 작을수록 심각한 학대유형 → 동점(tie) 시 우선 선택
 # 이 위계는 classify_abuse_main_sub()의 재현성을 보장합니다.
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+_SEVERITY_RANK = SEVERITY_RANK  # common.py 에서 정의
 
 
 def classify_abuse_main_sub(rec, abuse_order=ABUSE_ORDER,

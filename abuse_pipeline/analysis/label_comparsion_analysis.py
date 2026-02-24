@@ -59,10 +59,10 @@ import matplotlib.pyplot as plt
 # ═══════════════════════════════════════════════════════════════
 # 이 파일은 abuse_pipeline/ 패키지 내부에 위치하므로
 # 반드시 상대 import(relative import)를 사용합니다.
-from . import common as C
-from .labels import classify_child_group, classify_abuse_main_sub
-from .text import extract_child_speech, tokenize_korean
-from .compare_abuse_labels import (
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
+from abuse_pipeline.analysis.compare_abuse_labels import (
     extract_gt_abuse_types_from_info,
     normalize_abuse_label,
     DEFAULT_ABUSE_ORDER,
@@ -78,8 +78,7 @@ ABUSE_COLORS = {
 }
 ABUSE_LABEL_EN = C.ABUSE_LABEL_EN  # common.py에서 이미 정의된 영문 라벨 사용
 
-# 아동 안전 우선 위계 (labels.py와 동일)
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+_SEVERITY_RANK = C.SEVERITY_RANK
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1147,7 +1146,7 @@ def run_label_comparison_from_pipeline(
         abuse_order = ABUSE_ORDER
 
     if out_dir is None:
-        out_dir = os.path.join(C.OUTPUT_DIR, "label_comparison")
+        out_dir = C.LABEL_COMPARISON_DIR or os.path.join(C.OUTPUT_DIR, "label_comparison")
 
     os.makedirs(out_dir, exist_ok=True)
 

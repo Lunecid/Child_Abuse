@@ -60,49 +60,16 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Set
 
-try:
-    # 패키지로 임포트될 때 (pipeline.py 등에서 호출)
-    from . import common as C
-    from .common import (
-        ABUSE_ORDER,
-        ABUSE_LABEL_EN,
-        BRIDGE_MIN_P1,
-        BRIDGE_MIN_P2,
-        BRIDGE_MAX_GAP,
-        BRIDGE_MIN_COUNT,
-        BRIDGE_P_CONFIGS,
-    )
-except ImportError:
-    try:
-        from abuse_pipeline import common as C
-        from abuse_pipeline.common import (
-            ABUSE_ORDER,
-            ABUSE_LABEL_EN,
-            BRIDGE_MIN_P1,
-            BRIDGE_MIN_P2,
-            BRIDGE_MAX_GAP,
-            BRIDGE_MIN_COUNT,
-            BRIDGE_P_CONFIGS,
-        )
-    except ImportError:
-        import sys
-        from pathlib import Path
-
-        _this = Path(__file__).resolve()
-        _proj_root = _this.parent.parent
-        if str(_proj_root) not in sys.path:
-            sys.path.insert(0, str(_proj_root))
-
-        from abuse_pipeline import common as C
-        from abuse_pipeline.common import (
-            ABUSE_ORDER,
-            ABUSE_LABEL_EN,
-            BRIDGE_MIN_P1,
-            BRIDGE_MIN_P2,
-            BRIDGE_MAX_GAP,
-            BRIDGE_MIN_COUNT,
-            BRIDGE_P_CONFIGS,
-        )
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.common import (
+    ABUSE_ORDER,
+    ABUSE_LABEL_EN,
+    BRIDGE_MIN_P1,
+    BRIDGE_MIN_P2,
+    BRIDGE_MAX_GAP,
+    BRIDGE_MIN_COUNT,
+    BRIDGE_P_CONFIGS,
+)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1128,15 +1095,15 @@ if __name__ == "__main__":
     #   패키지 부모:  .../v28_refactor/
     #
     _this_file = Path(__file__).resolve()
-    _pkg_parent = str(_this_file.parent.parent)   # v28_refactor/
+    _pkg_parent = str(_this_file.parent.parent.parent)   # project root
     if _pkg_parent not in sys.path:
         sys.path.insert(0, _pkg_parent)
 
-    from abuse_pipeline.doc_level import (
+    from abuse_pipeline.data.doc_level import (
         build_abuse_doc_word_table,
         build_doc_level_abuse_counts,
     )
-    from abuse_pipeline.stats import compute_chi_square, add_bh_fdr
+    from abuse_pipeline.stats.stats import compute_chi_square, add_bh_fdr
 
     # C 와 ABUSE_ORDER 등은 이미 파일 상단 try/except에서
     # standalone fallback으로 import 완료된 상태:

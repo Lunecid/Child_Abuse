@@ -10,36 +10,36 @@ except Exception:
 
 import numpy as np
 import pandas as pd
-from . import common as C  # ✅ 반드시 상대 import로 통일
+from abuse_pipeline.core import common as C
 
-from .labels import classify_child_group, classify_abuse_main_sub
-from .text import (
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import (
     extract_child_speech, tokenize_korean,
     save_tokenization_examples, extract_bridge_utterances_p_z
 )
-from .stats import (
+from abuse_pipeline.stats.stats import (
     compute_hhi_and_cosine, compute_chi_square, add_bh_fdr, compute_log_odds,
     compute_prob_bridge_for_words,
     run_frequency_matched_baseline_for_bridge
 )
-from .doc_level import (
+from abuse_pipeline.data.doc_level import (
     build_doc_level_valence_counts, build_abuse_doc_word_table, build_doc_level_abuse_counts,
     run_doc_level_label_shuffle_permutation,
     run_bridge_prob_ablation, run_bridge_bootstrap_and_shuffle_doc_level
 )
-from .ca import (
+from abuse_pipeline.stats.ca import (
     run_abuse_ca_with_prob_bridges,
     bridge_ablation_and_assignments
 )
-from .embedding import (
+from abuse_pipeline.data.embedding import (
     train_embedding_models, project_embeddings_for_ca_words,
     compare_ca_and_embedding_spaces
 )
-from .plots import (
+from abuse_pipeline.core.plots import (
     set_korean_font,
     plot_valence_by_question_radar, run_tfidf_multilogit_no_leak
 )
-from .contextual_embedding_ca import run_bert_ca_validation
+from abuse_pipeline.stats.contextual_embedding_ca import run_bert_ca_validation
 
 
 def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = False) -> None:
@@ -762,7 +762,7 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
                     df_abuse_counts_doc is not None and not df_abuse_counts_doc.empty and
                     abuse_chi_doc is not None and not abuse_chi_doc.empty):
 
-                from .bridge_threshold_justification import (
+                from abuse_pipeline.stats.bridge_threshold_justification import (
                     run_bridge_threshold_justification,
                     prepare_doc_structures,
                     get_chi_top_words,
@@ -975,8 +975,7 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
     # BERT-CA 검증 + 이분 구조 착색 (try/except: transformers/torch 미설치 대비)
     # -------------------------------------------------
     bert_results = None
-    bert_ca_out = os.path.join(C.OUTPUT_DIR, "bert_ca_validation")
-    os.makedirs(bert_ca_out, exist_ok=True)
+    bert_ca_out = C.BERT_CA_DIR
 
     try:
         bert_results = run_bert_ca_validation(
@@ -1007,7 +1006,7 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
         _bert_word_df = bert_results.get("bert_word_coords")
         if _bert_word_df is not None and bary_df is not None:
             try:
-                from .bert_abuse_coloring import plot_bert_words_by_abuse_type
+                from abuse_pipeline.classifiers.bert_abuse_coloring import plot_bert_words_by_abuse_type
 
                 if abuse_stats_logodds is not None and not abuse_stats_logodds.empty:
                     _word_main_abuse = (
@@ -1102,10 +1101,9 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
     else:
         print("[FREQ-MATCHED] df_abuse_counts 또는 abuse_stats_logodds 가 비어 있어 freq-matched baseline을 건너뜁니다.")
 
-    from .revision_extensions import run_all_revisions
+    from abuse_pipeline.revision.revision_extensions import run_all_revisions
 
-    revision_out = os.path.join(C.OUTPUT_DIR, "revision")
-    os.makedirs(revision_out, exist_ok=True)
+    revision_out = C.REVISION_DIR
 
     df_text_abuse_rev = pd.DataFrame(rows_text_abuse) if rows_text_abuse else pd.DataFrame()
 
@@ -1122,10 +1120,9 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
     # =================================================
     if only_negative:
         try:
-            from .neg_gt_multilabel_analysis import run_neg_gt_multilabel_study
+            from abuse_pipeline.classifiers.neg_gt_multilabel_analysis import run_neg_gt_multilabel_study
 
-            paper_out = os.path.join(C.OUTPUT_DIR, "paper_neg_gt_multilabel")
-            os.makedirs(paper_out, exist_ok=True)
+            paper_out = C.NEG_GT_MULTILABEL_DIR
             _ = run_neg_gt_multilabel_study(
                 json_files=[str(x) for x in json_files],
                 out_dir=paper_out,

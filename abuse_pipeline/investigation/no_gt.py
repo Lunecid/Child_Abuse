@@ -25,18 +25,11 @@ import pandas as pd
 import sys
 
 _this = Path(__file__).resolve()
-_project_root = _this.parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
+_project_root = _this.parent.parent.parent  # investigation/ → abuse_pipeline/ → project root
 
-try:
-    from . import common as C
-    from .labels import classify_child_group, classify_abuse_main_sub
-    from .compare_abuse_labels import extract_gt_abuse_types_from_info
-except ImportError:
-    from abuse_pipeline import common as C
-    from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
-    from abuse_pipeline.compare_abuse_labels import extract_gt_abuse_types_from_info
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.analysis.compare_abuse_labels import extract_gt_abuse_types_from_info
 
 ABUSE_ORDER = C.ABUSE_ORDER  # ["성학대","신체학대","정서학대","방임"]
 
@@ -44,11 +37,13 @@ ABUSE_ORDER = C.ABUSE_ORDER  # ["성학대","신체학대","정서학대","방�
 #  설정
 # ═══════════════════════════════════════════════════════════════════════
 DATA_DIR      = _project_root / "data"
-OUT_DIR       = _project_root / "output_inspect"
 SUB_THRESHOLD = 4
 USE_CLINICAL  = True
 ONLY_NEGATIVE = True   # NEG 군만 분석
 
+# 출력 디렉토리: configure_output_dirs 기반, fallback 시 프로젝트 루트 아래
+C.configure_output_dirs(subset_name="NEG_ONLY", base_dir=str(_project_root))
+OUT_DIR = Path(C.NO_GT_DIR) if C.NO_GT_DIR else _project_root / "output_inspect"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 

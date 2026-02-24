@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from . import common as C
-from .labels import classify_child_group, classify_abuse_main_sub
-from .text import extract_child_speech, tokenize_korean
-from .stats import *
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
+from abuse_pipeline.stats.stats import *
 
 
 def build_doc_level_valence_counts(json_files, allowed_groups=None):

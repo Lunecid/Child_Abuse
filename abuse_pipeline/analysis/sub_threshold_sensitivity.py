@@ -73,7 +73,9 @@ ABUSE_COLORS = {
     "신체학대": "#2ca02c",
     "성학대": "#d62728",
 }
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+from abuse_pipeline.core import common as _C
+
+_SEVERITY_RANK = getattr(_C, "SEVERITY_RANK", None) or {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
 
 THRESHOLDS = [2, 3, 4, 5]
 
@@ -1047,8 +1049,8 @@ def main():
     )
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="JSON 데이터 디렉토리 (default: ./data)")
-    parser.add_argument("--out_dir", type=str, default="./sub_threshold_output",
-                        help="결과 저장 디렉토리 (default: ./sub_threshold_output)")
+    parser.add_argument("--out_dir", type=str, default=None,
+                        help="결과 저장 디렉토리 (default: configure_output_dirs 기반)")
     parser.add_argument("--only_negative", action="store_true", default=True,
                         help="정서군='부정' 아동만 분석 (default: True)")
     parser.add_argument("--all_children", action="store_true",
@@ -1061,6 +1063,13 @@ def main():
     else:
         only_negative = args.only_negative
 
+    if args.out_dir is None:
+        subset = "NEG_ONLY" if only_negative else "ALL"
+        if _C is not None:
+            _C.configure_output_dirs(subset_name=subset)
+            args.out_dir = _C.SUB_THRESHOLD_DIR
+        else:
+            args.out_dir = "./sub_threshold_output"
     os.makedirs(args.out_dir, exist_ok=True)
 
     print("╔" + "═" * 68 + "╗")

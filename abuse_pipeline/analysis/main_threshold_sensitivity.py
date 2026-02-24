@@ -63,22 +63,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ── labels.py에서 정서군 분류 및 학대유형 분류 함수 import (3-tier fallback) ──
-try:
-    from .labels import classify_child_group
-    from .labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
-except ImportError:
-    try:
-        from abuse_pipeline.labels import classify_child_group
-        from abuse_pipeline.labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
-    except ImportError:
-        try:
-            from labels import classify_child_group
-            from labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
-        except ImportError as e:
-            raise ImportError(
-                "labels.py를 찾을 수 없습니다. "
-                "abuse_pipeline 패키지로 실행하거나 labels.py와 같은 디렉토리에서 실행하세요."
-            ) from e
+from abuse_pipeline.core.labels import classify_child_group
+from abuse_pipeline.core.labels import classify_abuse_main_sub as _labels_classify_abuse_main_sub
 
 # ═══════════════════════════════════════════════════════════════
 #  0. 상수 정의
@@ -96,7 +82,9 @@ ABUSE_COLORS = {
     "신체학대": "#2ca02c",
     "성학대": "#d62728",
 }
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+from abuse_pipeline.core import common as _C
+
+_SEVERITY_RANK = getattr(_C, "SEVERITY_RANK", None) or {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
 
 # ★ 탐색할 main threshold 후보
 THRESHOLDS = [4, 5, 6, 7, 8]
@@ -1127,8 +1115,8 @@ def main():
     parser.add_argument("--data_dir", type=str,
                         default=r"C:\Users\todtj\PycharmProjects\Childeren\data",
                         help="JSON 데이터 디렉토리")
-    parser.add_argument("--out_dir", type=str, default="./main_threshold_output",
-                        help="결과 저장 디렉토리 (default: ./main_threshold_output)")
+    parser.add_argument("--out_dir", type=str, default=None,
+                        help="결과 저장 디렉토리 (default: configure_output_dirs 기반)")
     parser.add_argument("--only_negative", action="store_true", default=True,
                         help="정서군='부정' 아동만 분석 (default: True)")
     parser.add_argument("--all_children", action="store_true",
@@ -1141,6 +1129,13 @@ def main():
     else:
         only_negative = args.only_negative
 
+    if args.out_dir is None:
+        subset = "NEG_ONLY" if only_negative else "ALL"
+        if _C is not None:
+            _C.configure_output_dirs(subset_name=subset)
+            args.out_dir = _C.MAIN_THRESHOLD_DIR
+        else:
+            args.out_dir = "./main_threshold_output"
     os.makedirs(args.out_dir, exist_ok=True)
 
     print("╔" + "═" * 68 + "╗")

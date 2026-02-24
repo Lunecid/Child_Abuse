@@ -47,82 +47,23 @@ import matplotlib.pyplot as plt
 #  0. 프로젝트 모듈 Import — 3단계 폴백
 # ═══════════════════════════════════════════════════════════════════════
 
-_IMPORT_OK = False
-
-# ── 폴백 1: 상대 import (pipeline.py 에서 호출될 때) ──
-if not _IMPORT_OK:
-    try:
-        from . import common as C
-        from .labels import classify_child_group, classify_abuse_main_sub
-        from .text import extract_child_speech, tokenize_korean
-        from .compare_abuse_labels import (
-            extract_gt_abuse_types_from_info,
-            normalize_abuse_label,
-            DEFAULT_ABUSE_ORDER,
-        )
-        from .stats import (
-            compute_log_odds, compute_chi_square, add_bh_fdr,
-            compute_prob_bridge_for_words,
-        )
-        _IMPORT_OK = True
-    except ImportError:
-        pass
-
-# ── 폴백 2: 절대 경로 import (PyCharm 직접 실행, 프로젝트 루트가 sys.path) ──
-if not _IMPORT_OK:
-    try:
-        from abuse_pipeline import common as C
-        from abuse_pipeline.labels import (
-            classify_child_group, classify_abuse_main_sub,
-        )
-        from abuse_pipeline.text import (
-            extract_child_speech, tokenize_korean,
-        )
-        from abuse_pipeline.compare_abuse_labels import (
-            extract_gt_abuse_types_from_info,
-            normalize_abuse_label,
-            DEFAULT_ABUSE_ORDER,
-        )
-        from abuse_pipeline.stats import (
-            compute_log_odds, compute_chi_square, add_bh_fdr,
-            compute_prob_bridge_for_words,
-        )
-        _IMPORT_OK = True
-    except ImportError:
-        pass
-
-# ── 폴백 3: sys.path 직접 추가 후 재시도 ──
-if not _IMPORT_OK:
-    import sys
-    from pathlib import Path as _Path
-    _this_dir = _Path(__file__).resolve().parent
-    _proj_root = _this_dir.parent
-    for _p in [str(_proj_root), str(_this_dir)]:
-        if _p not in sys.path:
-            sys.path.insert(0, _p)
-
-    from abuse_pipeline import common as C
-    from abuse_pipeline.labels import (
-        classify_child_group, classify_abuse_main_sub,
-    )
-    from abuse_pipeline.text import (
-        extract_child_speech, tokenize_korean,
-    )
-    from abuse_pipeline.compare_abuse_labels import (
-        extract_gt_abuse_types_from_info,
-        normalize_abuse_label,
-        DEFAULT_ABUSE_ORDER,
-    )
-    from abuse_pipeline.stats import (
-        compute_log_odds, compute_chi_square, add_bh_fdr,
-        compute_prob_bridge_for_words,
-    )
-    _IMPORT_OK = True
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
+from abuse_pipeline.analysis.compare_abuse_labels import (
+    extract_gt_abuse_types_from_info,
+    normalize_abuse_label,
+    DEFAULT_ABUSE_ORDER,
+)
+from abuse_pipeline.stats.stats import (
+    compute_log_odds, compute_chi_square, add_bh_fdr,
+    compute_prob_bridge_for_words,
+)
 
 # ── 상수 ──
 ABUSE_ORDER    = C.ABUSE_ORDER            # ["성학대","신체학대","정서학대","방임"]
 ABUSE_LABEL_EN = C.ABUSE_LABEL_EN
-_SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+_SEVERITY_RANK = C.SEVERITY_RANK
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -903,7 +844,7 @@ def run_integrated_analysis(
 ):
     """7단계 통합 분석 실행."""
     if out_dir is None:
-        out_dir = os.path.join(getattr(C, "OUTPUT_DIR", "."), "integrated_analysis")
+        out_dir = getattr(C, "INTEGRATED_ANALYSIS_DIR", None) or os.path.join(getattr(C, "OUTPUT_DIR", "."), "integrated_analysis")
     os.makedirs(out_dir, exist_ok=True)
 
     _print_section("7단계 통합 분석 실행", 1)
@@ -1054,8 +995,7 @@ if __name__ == "__main__":
     print(f"  데이터  : {_data_dir}")
 
     C.configure_output_dirs(subset_name="NEG")
-    _out = os.path.join(C.OUTPUT_DIR, "integrated_analysis")
-    os.makedirs(_out, exist_ok=True)
+    _out = C.INTEGRATED_ANALYSIS_DIR
     print(f"  OUTPUT  : {C.OUTPUT_DIR}")
     print(f"  결과    : {_out}")
 

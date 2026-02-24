@@ -47,20 +47,13 @@ import pandas as pd
 
 # ── 기존 모듈 import ──
 try:
-    from .tfidf_vs_bert_comparision import (
+    from abuse_pipeline.classifiers.tfidf_vs_bert_comparision import (
         prepare_classification_data,
         run_bert_classifier,
     )
     _IMPORT_OK = True
 except ImportError:
-    try:
-        from abuse_pipeline.tfidf_vs_bert_comparision import (
-            prepare_classification_data,
-            run_bert_classifier,
-        )
-        _IMPORT_OK = True
-    except ImportError:
-        _IMPORT_OK = False
+    _IMPORT_OK = False
 
 
 # ═══════════════════════════════════════════════════════════════════
