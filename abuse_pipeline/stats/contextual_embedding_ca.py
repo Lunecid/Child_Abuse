@@ -167,7 +167,7 @@ class BERTUtteranceEncoder:
         self.hidden_size = self.model.config.hidden_size
         print(f"[BERT] 로딩 완료. hidden_size={self.hidden_size}")
 
-    @torch.no_grad()
+    @(torch.no_grad() if HAS_TRANSFORMERS else lambda f: f)
     def encode_batch(self, texts: list[str], batch_size: int = 32) -> np.ndarray:
         """
         문장 리스트를 배치 단위로 인코딩하여 (n_texts, hidden_size) 행렬을 반환.
