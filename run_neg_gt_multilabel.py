@@ -24,8 +24,24 @@ def main() -> None:
         help="산출물 디렉토리 (기본값: <project_root>/paper_neg_gt_multilabel)",
     )
     parser.add_argument("--gt_field", type=str, default="학대의심", help="GT 필드명")
+    parser.add_argument(
+        "--require_algo_main_for_corpus",
+        action="store_true",
+        help="main pipeline 정렬용: algo_main 존재 케이스만 코퍼스에 포함",
+    )
+    parser.add_argument(
+        "--dedupe_by_doc_id",
+        action="store_true",
+        help="doc_id 기준 중복 제거 후 학습/평가",
+    )
     parser.add_argument("--n_splits", type=int, default=5, help="Stratified K-fold 분할 수")
     parser.add_argument("--threshold", type=float, default=0.5, help="다중라벨 확률 임계값")
+    parser.add_argument(
+        "--multilabel_min_k",
+        type=int,
+        default=0,
+        help="샘플당 최소 예측 라벨 수 (0이면 train fold 평균 GT cardinality ceil 자동 사용)",
+    )
     parser.add_argument("--random_state", type=int, default=42, help="랜덤 시드")
 
     # BERT 하이퍼파라미터
@@ -65,9 +81,12 @@ def main() -> None:
         json_files=json_files,
         out_dir=str(out_dir),
         gt_field=args.gt_field,
+        require_algo_main_for_corpus=args.require_algo_main_for_corpus,
+        dedupe_by_doc_id=args.dedupe_by_doc_id,
         n_splits=args.n_splits,
         random_state=args.random_state,
         threshold=args.threshold,
+        multilabel_min_k=args.multilabel_min_k,
         bert_model_name=args.bert_model,
         bert_max_length=args.bert_max_length,
         bert_batch_size=args.bert_batch_size,
