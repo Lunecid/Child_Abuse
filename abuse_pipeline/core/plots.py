@@ -570,7 +570,6 @@ def run_tfidf_multilogit_no_leak(
                     multi_class="multinomial",
                     solver="lbfgs",
                     max_iter=300,
-                    n_jobs=-1,
                 ),
             ),
         ]

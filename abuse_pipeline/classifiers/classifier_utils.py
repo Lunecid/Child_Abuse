@@ -35,17 +35,15 @@ def make_singlelabel_clf(name: str, random_state: int = 42):
 
     if name == "LR":
         return C.LogisticRegression(
-            multi_class="multinomial",
             solver="lbfgs",
             max_iter=300,
-            n_jobs=-1,
             random_state=random_state,
         )
     if name == "RF":
         return C.RandomForestClassifier(
             n_estimators=200,
             max_depth=None,
-            n_jobs=-1,
+            n_jobs=1,
             random_state=random_state,
         )
     if name == "SVM":
@@ -74,7 +72,7 @@ def make_multilabel_clf(name: str, random_state: int = 42):
             n_estimators=200,
             max_depth=None,
             class_weight="balanced",
-            n_jobs=-1,
+            n_jobs=1,
             random_state=random_state,
         )
     if name == "SVM":
@@ -100,7 +98,15 @@ def fit_singlelabel_fold_tfidf(
 ) -> np.ndarray:
     """단일라벨 다중분류 예측 → 예측 라벨 배열."""
     vec = C.TfidfVectorizer(**C.TFIDF_PARAMS)
-    X_train_v = vec.fit_transform(x_train)
+    try:
+        X_train_v = vec.fit_transform(x_train)
+    except ValueError as e:
+        if "no terms remain" not in str(e):
+            raise
+        relaxed = dict(C.TFIDF_PARAMS)
+        relaxed["min_df"] = 1
+        vec = C.TfidfVectorizer(**relaxed)
+        X_train_v = vec.fit_transform(x_train)
     X_test_v = vec.transform(x_test)
 
     clf = make_singlelabel_clf(clf_name, random_state)
@@ -117,7 +123,15 @@ def fit_multilabel_fold_tfidf(
 ) -> np.ndarray:
     """Binary Relevance 방식 다중라벨 예측 → 확률 행렬 (n_test, n_labels)."""
     vec = C.TfidfVectorizer(**C.TFIDF_PARAMS)
-    X_train_v = vec.fit_transform(x_train)
+    try:
+        X_train_v = vec.fit_transform(x_train)
+    except ValueError as e:
+        if "no terms remain" not in str(e):
+            raise
+        relaxed = dict(C.TFIDF_PARAMS)
+        relaxed["min_df"] = 1
+        vec = C.TfidfVectorizer(**relaxed)
+        X_train_v = vec.fit_transform(x_train)
     X_test_v = vec.transform(x_test)
 
     n_test = X_test_v.shape[0]
