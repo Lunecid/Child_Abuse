@@ -70,29 +70,10 @@ def _bootstrap_syspath() -> None:
 
 _bootstrap_syspath()
 
-_IMPORT_OK = False
-try:
-    from . import common as C  # type: ignore
-    from .labels import classify_child_group, classify_abuse_main_sub  # type: ignore
-    from .text import extract_child_speech, tokenize_korean  # type: ignore
-    from .stats import compute_chi_square  # type: ignore
-    _IMPORT_OK = True
-except Exception:
-    pass
-
-if not _IMPORT_OK:
-    try:
-        from abuse_pipeline import common as C  # type: ignore
-        from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub  # type: ignore
-        from abuse_pipeline.text import extract_child_speech, tokenize_korean  # type: ignore
-        from abuse_pipeline.stats import compute_chi_square  # type: ignore
-        _IMPORT_OK = True
-    except Exception as e:
-        raise ImportError(
-            "abuse_pipeline import 실패. 이 파일을 프로젝트의 abuse_pipeline 아래에 두고 실행하거나, "
-            "python -m abuse_pipeline.revision_v2 형태로 실행하세요. "
-            f"원인: {e}"
-        )
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
+from abuse_pipeline.stats.stats import compute_chi_square
 
 
 ABUSE_ORDER: List[str] = list(getattr(C, "ABUSE_ORDER", ["성학대", "신체학대", "정서학대", "방임"]))

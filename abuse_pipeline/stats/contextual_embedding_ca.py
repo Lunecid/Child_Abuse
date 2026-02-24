@@ -61,28 +61,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 # ── 기존 파이프라인 모듈 import ──
-try:
-    from . import common as C
-    from .labels import classify_child_group, classify_abuse_main_sub
-    from .text import extract_child_speech, tokenize_korean
-except ImportError:
-    try:
-        from abuse_pipeline import common as C
-        from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
-        from abuse_pipeline.text import extract_child_speech, tokenize_korean
-    except ImportError:
-        try:
-            _this_dir = Path(__file__).resolve().parent
-            _proj_root = _this_dir.parent
-            _p = str(_proj_root)
-            if _p not in sys.path:
-                sys.path.insert(0, _p)
-            from abuse_pipeline import common as C
-            from abuse_pipeline.labels import classify_child_group, classify_abuse_main_sub
-            from abuse_pipeline.text import extract_child_speech, tokenize_korean
-        except ImportError:
-            C = None
-            print("[WARN] abuse_pipeline 모듈을 찾을 수 없습니다. 독립 실행 모드.")
+from abuse_pipeline.core import common as C
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
 
 # ── 선택적 의존성 ──
 try:

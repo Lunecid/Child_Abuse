@@ -8,9 +8,9 @@ import itertools
 import numpy as np
 import pandas as pd
 
-from . import common as C
-from .stats import compute_prob_bridge_for_words, compute_bridge_words
-from . import plots
+from abuse_pipeline.core import common as C
+from abuse_pipeline.stats.stats import compute_prob_bridge_for_words, compute_bridge_words
+from abuse_pipeline.core import plots
 
 # ---------------------------------------------------------------------------
 # optional dependencies (prince / scipy / adjustText)

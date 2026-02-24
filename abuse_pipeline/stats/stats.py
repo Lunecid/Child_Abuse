@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-from .common import *
+from abuse_pipeline.core.common import *
 
 
 def compute_hhi_and_cosine(df_counts: pd.DataFrame, group_cols):

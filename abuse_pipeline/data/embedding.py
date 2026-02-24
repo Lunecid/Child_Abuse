@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .common import *
-from .text import tokenize_korean
+from abuse_pipeline.core.common import *
+from abuse_pipeline.core.text import tokenize_korean
 import matplotlib.pyplot as plt
 
 def train_embedding_models(corpus_tokens, output_dir,

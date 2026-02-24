@@ -43,10 +43,12 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 import pandas as pd
 
-# ─── 상수 ───
-ABUSE_ORDER = ["성학대", "신체학대", "정서학대", "방임"]
+# ─── common 참조 ───
+from abuse_pipeline.core import common as _C
+
+ABUSE_ORDER = getattr(_C, "ABUSE_ORDER", None) or ["성학대", "신체학대", "정서학대", "방임"]
 ABUSE_EN = {"성학대": "Sexual", "신체학대": "Physical", "정서학대": "Emotional", "방임": "Neglect"}
-SEVERITY_RANK = {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
+SEVERITY_RANK = getattr(_C, "SEVERITY_RANK", None) or {"성학대": 0, "신체학대": 1, "정서학대": 2, "방임": 3}
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -596,11 +598,18 @@ def main():
     )
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="JSON 파일들이 있는 폴더 경로")
-    parser.add_argument("--out_dir", type=str, default="./borderline_output",
-                        help="결과 저장 폴더")
+    parser.add_argument("--out_dir", type=str, default=None,
+                        help="결과 저장 폴더 (default: configure_output_dirs 기반)")
     parser.add_argument("--max_examples", type=int, default=20,
                         help="콘솔에 출력할 상세 사례 수")
     args = parser.parse_args()
+
+    if args.out_dir is None:
+        if _C is not None:
+            _C.configure_output_dirs(subset_name="ALL")
+            args.out_dir = _C.BORDERLINE_DIR
+        else:
+            args.out_dir = "./borderline_output"
 
     if not os.path.isdir(args.data_dir):
         print(f"[ERROR] 데이터 디렉토리를 찾을 수 없습니다: {args.data_dir}")
