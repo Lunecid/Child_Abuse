@@ -33,6 +33,7 @@ from abuse_pipeline.stats import contextual_embedding_ca
 from abuse_pipeline.classifiers import classifier_utils
 from abuse_pipeline.classifiers import tfidf_vs_bert_comparision
 from abuse_pipeline.classifiers import neg_gt_multilabel_analysis
+from abuse_pipeline.classifiers import softlabel_vs_singlelabel_analysis
 from abuse_pipeline.classifiers import bert_hyperparameter
 from abuse_pipeline.classifiers import bert_abuse_coloring
 
@@ -70,6 +71,7 @@ _module_map = {
     "abuse_pipeline.classifier_utils": classifier_utils,
     "abuse_pipeline.tfidf_vs_bert_comparision": tfidf_vs_bert_comparision,
     "abuse_pipeline.neg_gt_multilabel_analysis": neg_gt_multilabel_analysis,
+    "abuse_pipeline.softlabel_vs_singlelabel_analysis": softlabel_vs_singlelabel_analysis,
     "abuse_pipeline.bert_hyperparameter": bert_hyperparameter,
     "abuse_pipeline.bert_abuse_coloring": bert_abuse_coloring,
     "abuse_pipeline.compare_abuse_labels": compare_abuse_labels,
