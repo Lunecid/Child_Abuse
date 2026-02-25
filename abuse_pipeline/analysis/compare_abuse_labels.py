@@ -136,30 +136,59 @@ def compare_one_record(
     pred_set = set([pred_main_n]) if pred_main_n else set()
     pred_set |= set(pred_subs_n)
 
-    # 매칭 지표
-    union = gt_types | pred_set
-    inter = gt_types & pred_set
-    jaccard = (len(inter) / len(union)) if union else None
+    # ── 세트 구성: Main only / Sub only / Main+Sub ──
+    main_only_set = {pred_main_n} if pred_main_n else set()
+    sub_only_set = set(pred_subs_n)
+    full_set = main_only_set | sub_only_set          # = pred_set
 
+    # ── Ablation 1: Main only vs GT ──
+    mo_inter = gt_types & main_only_set
+    mo_union = gt_types | main_only_set
     main_hit = (pred_main_n in gt_types) if (pred_main_n and gt_types) else False
-    exact_set_match = (pred_set == gt_types) if (pred_set or gt_types) else False
+    main_exact = (main_only_set == gt_types) if (main_only_set or gt_types) else False
+    main_jaccard = (len(mo_inter) / len(mo_union)) if mo_union else None
 
-    missing = sorted(gt_types - pred_set)
-    extra = sorted(pred_set - gt_types)
+    # ── Ablation 2: Sub only vs GT ──
+    so_inter = gt_types & sub_only_set
+    so_union = gt_types | sub_only_set
+    sub_any_hit = bool(so_inter) if (sub_only_set and gt_types) else False
+    sub_exact = (sub_only_set == gt_types) if (sub_only_set or gt_types) else False
+    sub_jaccard = (len(so_inter) / len(so_union)) if so_union else None
+
+    # ── Ablation 3: Main+Sub vs GT ──
+    fs_inter = gt_types & full_set
+    fs_union = gt_types | full_set
+    full_any_hit = bool(fs_inter) if (full_set and gt_types) else False
+    full_exact = (full_set == gt_types) if (full_set or gt_types) else False
+    full_jaccard = (len(fs_inter) / len(fs_union)) if fs_union else None
+
+    missing = sorted(gt_types - full_set)
+    extra = sorted(full_set - gt_types)
 
     return {
         "doc_id": doc_id,
         "gt_types": "|".join(sorted(gt_types)) if gt_types else "",
         "pred_main": pred_main_n or "",
-        "pred_subs": "|".join(sorted(set(pred_subs_n))) if pred_subs_n else "",
-        "pred_set": "|".join(sorted(pred_set)) if pred_set else "",
+        "pred_subs": "|".join(sorted(sub_only_set)) if sub_only_set else "",
+        "pred_set": "|".join(sorted(full_set)) if full_set else "",
+        # Ablation 1: Main only
         "main_hit": int(main_hit),
-        "exact_set_match": int(exact_set_match),
-        "jaccard": jaccard if jaccard is not None else "",
+        "main_exact": int(main_exact),
+        "main_jaccard": main_jaccard if main_jaccard is not None else "",
+        # Ablation 2: Sub only
+        "sub_any_hit": int(sub_any_hit),
+        "sub_exact": int(sub_exact),
+        "sub_jaccard": sub_jaccard if sub_jaccard is not None else "",
+        # Ablation 3: Main+Sub (full set)
+        "full_any_hit": int(full_any_hit),
+        "full_exact": int(full_exact),
+        "full_jaccard": full_jaccard if full_jaccard is not None else "",
+        # 메타
         "missing_from_pred": "|".join(missing),
         "extra_in_pred": "|".join(extra),
         "gt_has_label": int(bool(gt_types)),
         "pred_has_label": int(bool(pred_main_n or pred_subs_n)),
+        "has_sub": int(bool(sub_only_set)),
     }
 
 def evaluate_folder_or_file(
@@ -197,56 +226,109 @@ def evaluate_folder_or_file(
 
     df = pd.DataFrame(rows)
 
-    # 요약(일치율)
-    # - Main abuse가 존재하고 GT 라벨도 있는 케이스 기준
+    # ================================================================
+    # 요약: 3-way Ablation (Main abuse 존재 + GT 라벨 존재 코퍼스 기준)
+    # ================================================================
     df_both = df[(df["gt_has_label"] == 1) & (df["pred_main"] != "")].copy()
     denom = len(df_both)
-    if denom > 0:
-        main_acc = df_both["main_hit"].mean()
-        set_acc = df_both["exact_set_match"].mean()
-    else:
-        main_acc, set_acc = 0.0, 0.0
 
     n_gt_only = int(((df["gt_has_label"] == 1) & (df["pred_main"] == "")).sum())
     n_pred_only = int(((df["gt_has_label"] == 0) & (df["pred_main"] != "")).sum())
 
-    print("====================================")
-    print(f"Total records                      : {len(df)}")
-    print(f"Records with GT label              : {int(df['gt_has_label'].sum())}")
-    print(f"Records with Main abuse            : {int((df['pred_main'] != '').sum())}")
-    print(f"Records with BOTH (GT + Main)      : {denom}")
-    print(f"  GT only (no main abuse)          : {n_gt_only}")
-    print(f"  Main abuse only (no GT)          : {n_pred_only}")
-    print("------------------------------------")
-    print(f"Main match rate (main ∈ GT)        : {main_acc:.4f}")
-    print(f"Exact set match rate (set==GT)     : {set_acc:.4f}")
-    print("====================================")
+    print("=" * 62)
+    print(f"  Total records                    : {len(df)}")
+    print(f"  Records with GT label            : {int(df['gt_has_label'].sum())}")
+    print(f"  Records with Main abuse          : {int((df['pred_main'] != '').sum())}")
+    print(f"  Records with BOTH (GT + Main)    : {denom}")
+    print(f"    GT only (no main abuse)        : {n_gt_only}")
+    print(f"    Main abuse only (no GT)        : {n_pred_only}")
+    print("=" * 62)
 
-    # 불일치 리포트
+    # ── Ablation 비교 테이블 ──
+    def _safe_mean(series: pd.Series) -> float:
+        return series.mean() if len(series) > 0 else 0.0
+
+    def _safe_jaccard_mean(series: pd.Series) -> float:
+        numeric = pd.to_numeric(series, errors="coerce")
+        return numeric.mean() if numeric.notna().any() else 0.0
+
+    ablations = []
+
+    # (A) GT vs Main only
+    ablations.append({
+        "condition": "GT vs Main",
+        "n": denom,
+        "hit_rate": _safe_mean(df_both["main_hit"]),
+        "exact_match": _safe_mean(df_both["main_exact"]),
+        "jaccard": _safe_jaccard_mean(df_both["main_jaccard"]),
+    })
+
+    # (B) GT vs Sub only — sub가 존재하는 케이스 기준
+    df_sub = df_both[df_both["has_sub"] == 1].copy()
+    ablations.append({
+        "condition": "GT vs Sub",
+        "n": len(df_sub),
+        "hit_rate": _safe_mean(df_sub["sub_any_hit"]),
+        "exact_match": _safe_mean(df_sub["sub_exact"]),
+        "jaccard": _safe_jaccard_mean(df_sub["sub_jaccard"]),
+    })
+
+    # (C) GT vs Main+Sub (full set)
+    ablations.append({
+        "condition": "GT vs Main+Sub",
+        "n": denom,
+        "hit_rate": _safe_mean(df_both["full_any_hit"]),
+        "exact_match": _safe_mean(df_both["full_exact"]),
+        "jaccard": _safe_jaccard_mean(df_both["full_jaccard"]),
+    })
+
+    df_abl = pd.DataFrame(ablations)
+
+    print("\n┌─────────────────────────────────────────────────────────┐")
+    print("│           Label Comparison Ablation Table               │")
+    print("├────────────────┬───────┬──────────┬────────────┬────────┤")
+    print("│ Condition      │   N   │ Hit Rate │ Exact Match│ Jaccard│")
+    print("├────────────────┼───────┼──────────┼────────────┼────────┤")
+    for _, row in df_abl.iterrows():
+        print(f"│ {row['condition']:<14s} │ {row['n']:>5d} │ {row['hit_rate']:>8.4f} │ {row['exact_match']:>10.4f} │ {row['jaccard']:>6.4f} │")
+    print("└────────────────┴───────┴──────────┴────────────┴────────┘")
+
+    # ── 불일치 리포트 (Main vs GT 기준) ──
     mism = df_both[df_both["main_hit"] == 0].copy()
-    # main_hit 기준이 아니라 exact_set_match 기준으로 보고 싶으면 아래로 변경:
-    # mism = df_both[df_both["exact_set_match"] == 0].copy()
 
     df.to_csv(out_csv, index=False, encoding="utf-8-sig")
     mism.to_csv(out_mismatch_csv, index=False, encoding="utf-8-sig")
 
-    print(f"[Saved] Full report     -> {out_csv}")
+    print(f"\n[Saved] Full report     -> {out_csv}")
     print(f"[Saved] Mismatch report -> {out_mismatch_csv}")
 
     # 샘플 출력(상위 10개)
     if len(mism) > 0:
         print("\n--- Top mismatch examples (up to 10) ---")
-        show_cols = ["doc_id", "gt_types", "pred_main", "pred_subs", "missing_from_pred", "extra_in_pred", "source_file"]
+        show_cols = ["doc_id", "gt_types", "pred_main", "pred_subs",
+                     "missing_from_pred", "extra_in_pred", "source_file"]
         print(mism[show_cols].head(10).to_string(index=False))
 
-    # (선택) GT가 단일 라벨이고 Main abuse도 존재하는 케이스만 confusion matrix
-    df_single = df_both[df_both["gt_types"].str.contains(r"\|") == False].copy()
+    # ── Confusion Matrix: GT(단일 라벨) vs Main ──
+    df_single = df_both[~df_both["gt_types"].str.contains(r"\|", na=False)].copy()
     if len(df_single) > 0:
         df_single["gt_single"] = df_single["gt_types"]
         df_single["pred_main2"] = df_single["pred_main"].replace("", pd.NA)
         cm = pd.crosstab(df_single["gt_single"], df_single["pred_main2"], dropna=False)
-        print("\n--- Confusion matrix (GT single-label only) ---")
+        print("\n--- Confusion matrix: GT vs Main (single GT label) ---")
         print(cm)
+
+    # ── Confusion Matrix: GT(단일 라벨) vs Main+Sub 최다 라벨 ──
+    #    (Main+Sub set에서 GT와 겹치는 항목이 있으면 해당, 없으면 main 사용)
+    if len(df_single) > 0:
+        print("\n--- Confusion matrix: GT vs Main+Sub (single GT label) ---")
+        df_single["pred_best"] = df_single.apply(
+            lambda r: r["gt_single"] if r["gt_single"] in (r["pred_set"].split("|") if r["pred_set"] else []) else r["pred_main"],
+            axis=1,
+        )
+        df_single["pred_best"] = df_single["pred_best"].replace("", pd.NA)
+        cm2 = pd.crosstab(df_single["gt_single"], df_single["pred_best"], dropna=False)
+        print(cm2)
 
     return df, mism
 
