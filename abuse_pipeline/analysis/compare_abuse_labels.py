@@ -198,28 +198,34 @@ def evaluate_folder_or_file(
     df = pd.DataFrame(rows)
 
     # 요약(일치율)
-    # - GT가 존재하는 케이스 기준
-    df_gt = df[df["gt_has_label"] == 1].copy()
-    denom = len(df_gt)
+    # - Main abuse가 존재하고 GT 라벨도 있는 케이스 기준
+    df_both = df[(df["gt_has_label"] == 1) & (df["pred_main"] != "")].copy()
+    denom = len(df_both)
     if denom > 0:
-        main_acc = df_gt["main_hit"].mean()
-        set_acc = df_gt["exact_set_match"].mean()
+        main_acc = df_both["main_hit"].mean()
+        set_acc = df_both["exact_set_match"].mean()
     else:
         main_acc, set_acc = 0.0, 0.0
 
+    n_gt_only = int(((df["gt_has_label"] == 1) & (df["pred_main"] == "")).sum())
+    n_pred_only = int(((df["gt_has_label"] == 0) & (df["pred_main"] != "")).sum())
+
     print("====================================")
-    print(f"Total records           : {len(df)}")
-    print(f"Records with GT label   : {denom}")
-    print(f"Records with Pred label : {int(df['pred_has_label'].sum())}")
+    print(f"Total records                      : {len(df)}")
+    print(f"Records with GT label              : {int(df['gt_has_label'].sum())}")
+    print(f"Records with Main abuse            : {int((df['pred_main'] != '').sum())}")
+    print(f"Records with BOTH (GT + Main)      : {denom}")
+    print(f"  GT only (no main abuse)          : {n_gt_only}")
+    print(f"  Main abuse only (no GT)          : {n_pred_only}")
     print("------------------------------------")
-    print(f"Main match rate (main ∈ GT)    : {main_acc:.4f}")
-    print(f"Exact set match rate (set==GT) : {set_acc:.4f}")
+    print(f"Main match rate (main ∈ GT)        : {main_acc:.4f}")
+    print(f"Exact set match rate (set==GT)     : {set_acc:.4f}")
     print("====================================")
 
     # 불일치 리포트
-    mism = df_gt[df_gt["main_hit"] == 0].copy()
+    mism = df_both[df_both["main_hit"] == 0].copy()
     # main_hit 기준이 아니라 exact_set_match 기준으로 보고 싶으면 아래로 변경:
-    # mism = df_gt[df_gt["exact_set_match"] == 0].copy()
+    # mism = df_both[df_both["exact_set_match"] == 0].copy()
 
     df.to_csv(out_csv, index=False, encoding="utf-8-sig")
     mism.to_csv(out_mismatch_csv, index=False, encoding="utf-8-sig")
@@ -233,8 +239,8 @@ def evaluate_folder_or_file(
         show_cols = ["doc_id", "gt_types", "pred_main", "pred_subs", "missing_from_pred", "extra_in_pred", "source_file"]
         print(mism[show_cols].head(10).to_string(index=False))
 
-    # (선택) GT가 단일 라벨인 케이스만 confusion matrix
-    df_single = df_gt[df_gt["gt_types"].str.contains(r"\|") == False].copy()
+    # (선택) GT가 단일 라벨이고 Main abuse도 존재하는 케이스만 confusion matrix
+    df_single = df_both[df_both["gt_types"].str.contains(r"\|") == False].copy()
     if len(df_single) > 0:
         df_single["gt_single"] = df_single["gt_types"]
         df_single["pred_main2"] = df_single["pred_main"].replace("", pd.NA)
