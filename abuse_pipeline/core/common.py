@@ -62,6 +62,7 @@ MAIN_THRESHOLD_DIR: str | None = None
 SUB_THRESHOLD_DIR: str | None = None
 LABEL_COMPARISON_DIR: str | None = None
 INTEGRATED_ANALYSIS_DIR: str | None = None
+MAIN_SUB_ANALYSIS_DIR: str | None = None
 COUNTING_DIR: str | None = None
 BORDERLINE_DIR: str | None = None
 NO_GT_DIR: str | None = None
@@ -405,7 +406,7 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
     global CA_PROB_DIR, BRIDGE_PROB_ABLATION_DIR, BRIDGE_DELTA_DIR
     global NEG_GT_MULTILABEL_DIR, MODEL_COMPARISON_DIR
     global MAIN_THRESHOLD_DIR, SUB_THRESHOLD_DIR
-    global LABEL_COMPARISON_DIR, INTEGRATED_ANALYSIS_DIR
+    global LABEL_COMPARISON_DIR, INTEGRATED_ANALYSIS_DIR, MAIN_SUB_ANALYSIS_DIR
     global COUNTING_DIR, BORDERLINE_DIR, NO_GT_DIR
     global REVISION_DIR, BERT_CA_DIR
 
@@ -444,6 +445,7 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
     SUB_THRESHOLD_DIR = os.path.join(OUTPUT_DIR, "sub_threshold")
     LABEL_COMPARISON_DIR = os.path.join(OUTPUT_DIR, "label_comparison")
     INTEGRATED_ANALYSIS_DIR = os.path.join(OUTPUT_DIR, "integrated_analysis")
+    MAIN_SUB_ANALYSIS_DIR = os.path.join(OUTPUT_DIR, "main_sub_analysis")
     COUNTING_DIR = os.path.join(OUTPUT_DIR, "counting")
     BORDERLINE_DIR = os.path.join(OUTPUT_DIR, "borderline")
     NO_GT_DIR = os.path.join(OUTPUT_DIR, "no_gt_inspect")
@@ -467,6 +469,7 @@ def configure_output_dirs(subset_name: str = "ALL", base_dir: str | None = None,
         SUB_THRESHOLD_DIR,
         LABEL_COMPARISON_DIR,
         INTEGRATED_ANALYSIS_DIR,
+        MAIN_SUB_ANALYSIS_DIR,
         COUNTING_DIR,
         BORDERLINE_DIR,
         NO_GT_DIR,

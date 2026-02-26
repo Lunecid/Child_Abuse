@@ -580,6 +580,8 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
     df_abuse_counts = pd.DataFrame()
     abuse_stats_logodds = pd.DataFrame()
     abuse_stats_chi = pd.DataFrame()
+    df_abuse_counts_doc = pd.DataFrame()
+    bridge_pz = pd.DataFrame()
     bary_df = None
     row_coords_2d = None
 
@@ -1116,7 +1118,31 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
     )
 
     # =================================================
-    # 9. 논문용: ABUSE_NEG + GT 기반 다중라벨(main+sub) vs 단일라벨(main) 비교
+    # 9. 논문용: ABUSE_NEG Main+Sub 통합 분석 (7단계)
+    # =================================================
+    if only_negative:
+        try:
+            from abuse_pipeline.analysis.main_sub_abuse_analysis import run_integrated_analysis as run_main_sub_analysis
+
+            main_sub_out = C.MAIN_SUB_ANALYSIS_DIR
+            _ = run_main_sub_analysis(
+                json_files=[str(x) for x in json_files],
+                out_dir=main_sub_out,
+                bridge_df=bridge_pz if not bridge_pz.empty else None,
+                df_counts=df_abuse_counts_doc if df_abuse_counts_doc is not None and not df_abuse_counts_doc.empty else None,
+                sub_threshold=4,
+                use_clinical_text=True,
+                only_negative=True,
+            )
+        except Exception as e:
+            print(f"[MAIN-SUB] 실행 실패: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("[MAIN-SUB] only_negative=False 이므로 Main+Sub 통합 분석을 건너뜁니다.")
+
+    # =================================================
+    # 10. 논문용: ABUSE_NEG + GT 기반 다중라벨(main+sub) vs 단일라벨(main) 비교
     # =================================================
     if only_negative:
         try:
