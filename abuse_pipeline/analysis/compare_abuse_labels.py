@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 from abuse_pipeline.core import common as C
-from abuse_pipeline.core.labels import classify_abuse_main_sub
+from abuse_pipeline.core.labels import classify_abuse_main_sub, classify_child_group
 
 
 # -----------------------------
@@ -197,6 +197,7 @@ def evaluate_folder_or_file(
     sub_threshold: int = 4,
     use_clinical_text: bool = True,
     gt_field: str = "학대의심",
+    only_negative: bool = True,
     out_csv: str = "abuse_label_compare_report.csv",
     out_mismatch_csv: str = "abuse_label_compare_mismatches.csv",
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -209,11 +210,21 @@ def evaluate_folder_or_file(
     else:
         files = [p]
 
+    corpus_tag = "NEG_ONLY" if only_negative else "ALL"
+    n_skipped = 0
+
     rows: List[Dict[str, Any]] = []
     for fp in files:
         obj = load_json(fp)
         recs = iter_records(obj)
         for rec in recs:
+            # NEG 코퍼스 필터: 정서군이 '부정'인 아동만
+            if only_negative:
+                group = classify_child_group(rec)
+                if group != "부정":
+                    n_skipped += 1
+                    continue
+
             r = compare_one_record(
                 rec,
                 abuse_order=abuse_order,
@@ -236,7 +247,10 @@ def evaluate_folder_or_file(
     n_pred_only = int(((df["gt_has_label"] == 0) & (df["pred_main"] != "")).sum())
 
     print("=" * 62)
-    print(f"  Total records                    : {len(df)}")
+    print(f"  Corpus                           : {corpus_tag}")
+    if only_negative:
+        print(f"  Skipped (non-부정)               : {n_skipped}")
+    print(f"  Total records (after filter)     : {len(df)}")
     print(f"  Records with GT label            : {int(df['gt_has_label'].sum())}")
     print(f"  Records with Main abuse          : {int((df['pred_main'] != '').sum())}")
     print(f"  Records with BOTH (GT + Main)    : {denom}")
@@ -338,10 +352,11 @@ def evaluate_folder_or_file(
 # -----------------------------
 if __name__ == "__main__":
     df, mism = evaluate_folder_or_file(
-        input_path= C.DATA_JSON_DIR,
+        input_path=C.DATA_JSON_DIR,
         sub_threshold=4,
         use_clinical_text=True,
         gt_field="학대의심",
+        only_negative=True,
         out_csv="report.csv",
         out_mismatch_csv="mismatch.csv",
     )
