@@ -1045,7 +1045,7 @@ if __name__ == "__main__":
     print(f"  데이터  : {_data_dir}")
 
     C.configure_output_dirs(subset_name="NEG")
-    _out = C.INTEGRATED_ANALYSIS_DIR
+    _out = C.MAIN_SUB_ANALYSIS_DIR
     print(f"  OUTPUT  : {C.OUTPUT_DIR}")
     print(f"  결과    : {_out}")
 
