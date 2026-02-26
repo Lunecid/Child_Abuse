@@ -498,13 +498,17 @@ def stage3_clinical_text_analysis(records):
 
 def stage4_hidden_companion_extended(records):
     _print_section("Stage 4: Hidden Companion + 정보 손실 (ΔH = H_multi - H_single)", 1)
+    # ★ abuse_neg 코퍼스: GT 라벨 유무와 무관하게 알고리즘 라벨이 있는 모든 아동
+    abuse_neg = [r for r in records if r["algo_main"] and r["algo_set"]]
+    # GT 코퍼스: Hidden Companion 분석용 (GT 라벨 필요)
     labeled = [r for r in records if r["gt_label"] and r["algo_main"] and r["algo_set"]]
 
     # 엔트로피: ΔH_i = H_i^{multi} - H_i^{single}
     # H_single = 0 (GT 단일 라벨: 확정적 할당)
     # 따라서 ΔH_i = H_i^{multi}
+    # ★ abuse_neg 코퍼스 사용 (GT 라벨 유무 불문)
     ent = []
-    for r in labeled:
+    for r in abuse_neg:
         scores = r["abuse_scores"]
         rel = {a: scores.get(a, 0) for a in r["algo_set"]}
         total = sum(rel.values())
@@ -543,7 +547,7 @@ def stage4_hidden_companion_extended(records):
             },
         }
 
-        print(f"\n  대상: {N}명")
+        print(f"\n  대상: {N}명 (abuse_neg 코퍼스, GT 라벨 유무 불문)")
         print(f"  정의: ΔH = H_multi - H_single,  H_single = 0 (GT 단일 라벨)")
         print(f"  [전체] 평균 ΔH = {mean_loss:.4f} bits  |  중앙값 ΔH = {overall_median:.4f} bits")
         print(f"  [Main only] n={len(df_mo)} ({subgroup_stats['main_only']['pct']:.1f}%): ΔH = 0")
