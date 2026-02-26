@@ -504,13 +504,20 @@ def compute_information_loss(records: List[Dict]) -> Dict[str, Any]:
     """
     정답(GT) 단일 라벨 대비 알고리즘 다중 라벨의 정보량 차이를 엔트로피로 측정한다.
 
-    ─── 알고리즘 라벨의 엔트로피 (사례별) ───
-    수식: H_i^Algo = -Σ_{A_k ∈ L^Algo-set_i} p_k · log₂(p_k)
+    ─── 정보 손실 정의 ───
+    수식: ΔH_i = H_i^{multi} - H_i^{single}
 
-    여기서 p_k = Score(i, A_k) / Σ_{A_j ∈ L^Algo-set_i} Score(i, A_j)
+    여기서:
+      H_i^{multi}  = -Σ_{A_k ∈ L^Algo-set_i} p_k · log₂(p_k)   (알고리즘 다중 라벨 엔트로피)
+      H_i^{single} = 0 bits                                      (GT 단일 라벨: 확정적 할당)
+      p_k = Score(i, A_k) / Σ_{A_j ∈ L^Algo-set_i} Score(i, A_j)
 
-    ─── 전체 정보 손실 ───
-    수식: ΔH = (1/N) · Σ_i H_i^Algo
+    따라서 ΔH_i = H_i^{multi} - 0 = H_i^{multi}
+
+    ─── 하위집단 분리 보고 ───
+    Main only (n_labels=1): ΔH = 0 (단일 라벨 → 정보 손실 없음)
+    Main+Sub  (n_labels>1): ΔH > 0 (다중 라벨 → 정보 손실 발생)
+    전체 평균이 중앙값보다 작을 수 있음: Main only(ΔH=0)가 평균을 끌어내리기 때문
     """
     labeled = [r for r in records if r["algo_main"] is not None and len(r["algo_set"]) > 0]
 
@@ -527,52 +534,103 @@ def compute_information_loss(records: List[Dict]) -> Dict[str, Any]:
         if total_score <= 0:
             n = len(algo_set)
             if n > 1:
-                h = np.log2(n)
+                h_multi = np.log2(n)
             else:
-                h = 0.0
+                h_multi = 0.0
         else:
             probs = {a: s / total_score for a, s in relevant_scores.items() if s > 0}
-            h = 0.0
+            h_multi = 0.0
             for a, p in probs.items():
                 if p > 0:
-                    h -= p * np.log2(p)
+                    h_multi -= p * np.log2(p)
 
-        entropies.append(h)
+        # GT 단일 라벨의 엔트로피: 확정적 할당이므로 H_single = 0
+        h_single = 0.0
+        # 정보 손실: ΔH = H_multi - H_single
+        delta_h = h_multi - h_single
+
+        is_multi = len(algo_set) > 1
+        subgroup = "Main+Sub" if is_multi else "Main only"
+
+        entropies.append(delta_h)
         details.append({
             "doc_id": r["doc_id"],
             "algo_main": r["algo_main"],
             "n_labels": len(algo_set),
-            "entropy_algo": h,
-            "entropy_gt": 0.0,
-            "info_loss": h,
+            "subgroup": subgroup,
+            "H_multi": h_multi,
+            "H_single": h_single,
+            "entropy_algo": h_multi,
+            "entropy_gt": h_single,
+            "info_loss": delta_h,
         })
 
     df_entropy = pd.DataFrame(details)
 
+    # ── 하위집단별 기술통계 ──
+    subgroup_stats = {}
     if not df_entropy.empty:
-        mean_entropy = df_entropy["entropy_algo"].mean()
-        median_entropy = df_entropy["entropy_algo"].median()
-        mean_loss = df_entropy["info_loss"].mean()
+        N = len(df_entropy)
+        mean_entropy = df_entropy["info_loss"].mean()
+        median_entropy = df_entropy["info_loss"].median()
 
-        entropy_by_n = df_entropy.groupby("n_labels")["entropy_algo"].agg(["mean", "count"])
+        df_main_only = df_entropy[df_entropy["n_labels"] == 1]
+        df_main_sub = df_entropy[df_entropy["n_labels"] > 1]
+        n_main_only = len(df_main_only)
+        n_main_sub = len(df_main_sub)
 
-        print(f"\n{'='*60}")
-        print(f"  Phase 4: 정보 손실 정량화 (엔트로피)")
-        print(f"{'='*60}")
-        print(f"  분석 대상 아동 수         : {len(df_entropy)}")
-        print(f"  평균 알고리즘 엔트로피     : {mean_entropy:.4f} bits")
-        print(f"  중앙값 알고리즘 엔트로피   : {median_entropy:.4f} bits")
-        print(f"  평균 정보 손실 ΔH          : {mean_loss:.4f} bits")
-        print(f"")
-        print(f"  라벨 수별 평균 엔트로피:")
+        subgroup_stats["total"] = {
+            "n": N,
+            "mean": float(mean_entropy),
+            "median": float(median_entropy),
+        }
+        subgroup_stats["main_only"] = {
+            "n": n_main_only,
+            "pct": n_main_only / N * 100 if N > 0 else 0,
+            "mean": float(df_main_only["info_loss"].mean()) if n_main_only > 0 else 0.0,
+            "median": float(df_main_only["info_loss"].median()) if n_main_only > 0 else 0.0,
+        }
+        subgroup_stats["main_sub"] = {
+            "n": n_main_sub,
+            "pct": n_main_sub / N * 100 if N > 0 else 0,
+            "mean": float(df_main_sub["info_loss"].mean()) if n_main_sub > 0 else 0.0,
+            "median": float(df_main_sub["info_loss"].median()) if n_main_sub > 0 else 0.0,
+        }
+
+        entropy_by_n = df_entropy.groupby("n_labels")["info_loss"].agg(["mean", "count"])
+
+        print(f"\n{'='*70}")
+        print(f"  Phase 4: 정보 손실 정량화 (ΔH = H_multi - H_single)")
+        print(f"{'='*70}")
+        print(f"  정의: ΔH_i = H_i^{{multi}} - H_i^{{single}}")
+        print(f"        H_single = 0 bits (GT 단일 라벨: 확정적 할당)")
+        print(f"        따라서 ΔH_i = H_i^{{multi}}")
+        print(f"{'─'*70}")
+        print(f"  [전체] 분석 대상 아동 수   : {N}")
+        print(f"  [전체] 평균 ΔH             : {mean_entropy:.4f} bits")
+        print(f"  [전체] 중앙값 ΔH           : {median_entropy:.4f} bits")
+        print(f"{'─'*70}")
+        print(f"  [Main only] n={n_main_only} ({subgroup_stats['main_only']['pct']:.1f}%)")
+        print(f"    ΔH = 0 bits (단일 라벨 → 정보 손실 없음)")
+        print(f"  [Main+Sub]  n={n_main_sub} ({subgroup_stats['main_sub']['pct']:.1f}%)")
+        if n_main_sub > 0:
+            print(f"    평균 ΔH  = {subgroup_stats['main_sub']['mean']:.4f} bits")
+            print(f"    중앙값 ΔH = {subgroup_stats['main_sub']['median']:.4f} bits")
+        print(f"{'─'*70}")
+        if mean_entropy < median_entropy:
+            print(f"  ※ 평균({mean_entropy:.4f}) < 중앙값({median_entropy:.4f}): "
+                  f"Main only({n_main_only}명, ΔH=0)가 평균을 끌어내림")
+        print(f"{'─'*70}")
+        print(f"  라벨 수별 평균 ΔH:")
         for n_labels, row in entropy_by_n.iterrows():
-            print(f"    {n_labels}개 라벨: 평균 H = {row['mean']:.4f} bits (n={int(row['count'])})")
-        print(f"{'='*60}")
+            print(f"    {n_labels}개 라벨: 평균 ΔH = {row['mean']:.4f} bits (n={int(row['count'])})")
+        print(f"{'='*70}")
 
     return {
         "df_entropy": df_entropy,
         "mean_entropy": float(np.mean(entropies)) if entropies else 0.0,
         "mean_info_loss": float(np.mean(entropies)) if entropies else 0.0,
+        "subgroup_stats": subgroup_stats,
     }
 
 
@@ -1000,30 +1058,46 @@ def _plot_poly_victimization_summary(poly_result: Dict, out_dir: str, fig_prefix
 
 
 def _plot_information_loss(entropy_result: Dict, out_dir: str, fig_prefix: str = "phase4") -> None:
-    """정보 손실 분포 시각화."""
+    """정보 손실 분포 시각화 (하위집단 분리 표시)."""
     os.makedirs(out_dir, exist_ok=True)
     df = entropy_result.get("df_entropy")
     if df is None or df.empty:
         return
 
+    sg = entropy_result.get("subgroup_stats", {})
+
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
+    # (A) 전체 분포 히스토그램 + 하위집단 표시
     ax = axes[0]
-    ax.hist(df["entropy_algo"], bins=30, color="#4C72B0", edgecolor="black", alpha=0.8)
-    ax.axvline(df["entropy_algo"].mean(), color="red", linestyle="--", linewidth=2,
-               label=f"Mean = {df['entropy_algo'].mean():.3f} bits")
-    ax.set_xlabel("Algorithm label entropy (bits)", fontsize=11)
+    ax.hist(df["info_loss"], bins=30, color="#4C72B0", edgecolor="black", alpha=0.8)
+    overall_mean = df["info_loss"].mean()
+    overall_median = df["info_loss"].median()
+    ax.axvline(overall_mean, color="red", linestyle="--", linewidth=2,
+               label=f"Mean ΔH = {overall_mean:.3f} bits")
+    ax.axvline(overall_median, color="orange", linestyle=":", linewidth=2,
+               label=f"Median ΔH = {overall_median:.3f} bits")
+    ax.set_xlabel("ΔH = H_multi − H_single (bits)", fontsize=11)
     ax.set_ylabel("Number of children", fontsize=11)
-    ax.set_title("(A) Distribution of Label Entropy\n"
-                 "(GT single label: always 0 bits)",
-                 fontsize=12, fontweight="bold")
-    ax.legend(fontsize=10)
 
+    # 하위집단 정보 표시
+    subtitle_parts = ["(H_single = 0: deterministic GT label)"]
+    if sg.get("main_only") and sg.get("main_sub"):
+        subtitle_parts.append(
+            f"Main only: n={sg['main_only']['n']} ({sg['main_only']['pct']:.0f}%, ΔH=0)  |  "
+            f"Main+Sub: n={sg['main_sub']['n']} ({sg['main_sub']['pct']:.0f}%, "
+            f"mean={sg['main_sub']['mean']:.3f})")
+    ax.set_title("(A) Distribution of Information Loss ΔH\n"
+                 + "\n".join(subtitle_parts),
+                 fontsize=11, fontweight="bold")
+    ax.legend(fontsize=9)
+
+    # (B) 라벨 수별 박스플롯
     ax = axes[1]
     groups_for_box = []
     labels_for_box = []
     for n_labels in sorted(df["n_labels"].unique()):
-        subset = df[df["n_labels"] == n_labels]["entropy_algo"].values
+        subset = df[df["n_labels"] == n_labels]["info_loss"].values
         if len(subset) > 0:
             groups_for_box.append(subset)
             labels_for_box.append(f"{n_labels} types\n(n={len(subset)})")
@@ -1037,13 +1111,16 @@ def _plot_information_loss(entropy_result: Dict, out_dir: str, fig_prefix: str =
             patch.set_alpha(0.7)
 
     ax.set_xlabel("Number of maltreatment types assigned", fontsize=11)
-    ax.set_ylabel("Label entropy (bits)", fontsize=11)
-    ax.set_title("(B) Entropy by Label Count\n"
-                 f"(Mean info loss ΔH = {entropy_result['mean_info_loss']:.3f} bits)",
-                 fontsize=12, fontweight="bold")
+    ax.set_ylabel("ΔH = H_multi − H_single (bits)", fontsize=11)
+    ms_mean = sg.get("main_sub", {}).get("mean", entropy_result["mean_info_loss"])
+    ax.set_title("(B) ΔH by Label Count\n"
+                 f"(Overall mean ΔH = {entropy_result['mean_info_loss']:.3f} bits, "
+                 f"Main+Sub mean = {ms_mean:.3f} bits)",
+                 fontsize=11, fontweight="bold")
 
-    fig.suptitle("Information Loss: GT Single Label vs. Algorithm Multi-Label",
-                 fontsize=14, fontweight="bold", y=1.02)
+    fig.suptitle("Information Loss: ΔH = H_multi − H_single\n"
+                 "(GT single-label assignment → H_single = 0 bits)",
+                 fontsize=13, fontweight="bold", y=1.04)
     fig.tight_layout()
 
     path = os.path.join(out_dir, f"{fig_prefix}_information_loss.png")
@@ -1267,6 +1344,13 @@ def run_label_comparison_from_pipeline(
         summary_rows.append({"metric": "N Labeled Children", "value": str(poly_result['n_labeled'])})
     if entropy_result.get("mean_info_loss"):
         summary_rows.append({"metric": "Mean Info Loss (ΔH)", "value": f"{entropy_result['mean_info_loss']:.4f} bits"})
+    sg = entropy_result.get("subgroup_stats", {})
+    if sg.get("main_only"):
+        summary_rows.append({"metric": "Main only (ΔH=0) n", "value": str(sg["main_only"]["n"])})
+        summary_rows.append({"metric": "Main only (ΔH=0) %", "value": f"{sg['main_only']['pct']:.1f}%"})
+    if sg.get("main_sub"):
+        summary_rows.append({"metric": "Main+Sub mean ΔH", "value": f"{sg['main_sub']['mean']:.4f} bits"})
+        summary_rows.append({"metric": "Main+Sub median ΔH", "value": f"{sg['main_sub']['median']:.4f} bits"})
 
     df_summary = pd.DataFrame(summary_rows)
     df_summary.to_csv(

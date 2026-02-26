@@ -553,28 +553,62 @@ def stage3_clinical_text_analysis(records):
 # ═══════════════════════════════════════════════════════════════════════
 
 def stage4_hidden_companion_extended(records):
-    _print_section("Stage 4: Hidden Companion + 정보 손실 (ΔH)", 1)
+    _print_section("Stage 4: Hidden Companion + 정보 손실 (ΔH = H_multi - H_single)", 1)
     labeled = [r for r in records if r["bert_label"] and r["algo_main"] and r["algo_set"]]
 
-    # 엔트로피
+    # 엔트로피: ΔH_i = H_i^{multi} - H_i^{single}
+    # H_single = 0 (BERT 단일 라벨: 확정적 할당)
+    # 따라서 ΔH_i = H_i^{multi}
     ent = []
     for r in labeled:
         scores = r["abuse_scores"]
         rel = {a: scores.get(a, 0) for a in r["algo_set"]}
         total = sum(rel.values())
         if total <= 0:
-            h = np.log2(len(r["algo_set"])) if len(r["algo_set"]) > 1 else 0.0
+            h_multi = np.log2(len(r["algo_set"])) if len(r["algo_set"]) > 1 else 0.0
         else:
             ps = [s / total for s in rel.values() if s > 0]
-            h = sum(-p * np.log2(p) for p in ps)
+            h_multi = sum(-p * np.log2(p) for p in ps)
+        h_single = 0.0  # BERT 단일 라벨: 확정적 할당
+        delta_h = h_multi - h_single
+        is_multi = len(r["algo_set"]) > 1
         ent.append(dict(doc_id=r["doc_id"], n_labels=len(r["algo_set"]),
-                        H_algo=h, delta_H=h))
+                        subgroup="Main+Sub" if is_multi else "Main only",
+                        H_multi=h_multi, H_single=h_single,
+                        H_algo=h_multi, delta_H=delta_h))
     df_ent = pd.DataFrame(ent)
     mean_loss = df_ent["delta_H"].mean() if len(df_ent) else 0
 
-    print(f"\n  대상: {len(df_ent)}명")
-    print(f"  BERT H = 0 (단일 라벨)  |  Algo 평균 H = {df_ent['H_algo'].mean():.4f}")
-    print(f"  평균 ΔH = {mean_loss:.4f} bits")
+    # 하위집단별 기술통계
+    subgroup_stats = {}
+    if len(df_ent):
+        N = len(df_ent)
+        overall_median = float(df_ent["delta_H"].median())
+        df_mo = df_ent[df_ent["n_labels"] == 1]
+        df_ms = df_ent[df_ent["n_labels"] > 1]
+        subgroup_stats = {
+            "total": {"n": N, "mean": float(mean_loss), "median": overall_median},
+            "main_only": {
+                "n": len(df_mo), "pct": len(df_mo) / N * 100,
+                "mean": 0.0, "median": 0.0,
+            },
+            "main_sub": {
+                "n": len(df_ms), "pct": len(df_ms) / N * 100,
+                "mean": float(df_ms["delta_H"].mean()) if len(df_ms) else 0.0,
+                "median": float(df_ms["delta_H"].median()) if len(df_ms) else 0.0,
+            },
+        }
+
+        print(f"\n  대상: {N}명")
+        print(f"  정의: ΔH = H_multi - H_single,  H_single = 0 (BERT 단일 라벨)")
+        print(f"  [전체] 평균 ΔH = {mean_loss:.4f} bits  |  중앙값 ΔH = {overall_median:.4f} bits")
+        print(f"  [Main only] n={len(df_mo)} ({subgroup_stats['main_only']['pct']:.1f}%): ΔH = 0")
+        if len(df_ms):
+            print(f"  [Main+Sub]  n={len(df_ms)} ({subgroup_stats['main_sub']['pct']:.1f}%): "
+                  f"평균 ΔH = {subgroup_stats['main_sub']['mean']:.4f}, "
+                  f"중앙값 ΔH = {subgroup_stats['main_sub']['median']:.4f}")
+        if mean_loss < overall_median:
+            print(f"  ※ 평균 < 중앙값: Main only({len(df_mo)}명, ΔH=0)가 평균을 끌어내림")
 
     # Hidden Companion P(Sub=열 | BERT=행)
     bg = defaultdict(list)
@@ -606,6 +640,7 @@ def stage4_hidden_companion_extended(records):
         pair_den[p] = pair_den.get(p, 0) + row["p_hidden"]
 
     return dict(df_entropy=df_ent, mean_info_loss=mean_loss,
+                subgroup_stats=subgroup_stats,
                 df_hidden_companion=df_hc, pair_density=pair_den)
 
 
@@ -784,9 +819,18 @@ def stage7_triangulation_report(s4, s5, s6):
     rows = []
 
     # 수치
-    rows.append(dict(layer="수치적", indicator="평균 ΔH",
+    sg = s4.get("subgroup_stats", {})
+    rows.append(dict(layer="수치적", indicator="전체 평균 ΔH",
                      value=f"{s4.get('mean_info_loss',0):.4f} bits",
-                     interp="BERT 단일 라벨이 소멸시키는 정보량"))
+                     interp="ΔH = H_multi - H_single (H_single=0)"))
+    if sg.get("main_only"):
+        rows.append(dict(layer="수치적", indicator="Main only (ΔH=0)",
+                         value=f"n={sg['main_only']['n']} ({sg['main_only']['pct']:.1f}%)",
+                         interp="단일 라벨 → 정보 손실 없음"))
+    if sg.get("main_sub") and sg["main_sub"]["n"] > 0:
+        rows.append(dict(layer="수치적", indicator="Main+Sub 평균 ΔH",
+                         value=f"{sg['main_sub']['mean']:.4f} bits (중앙값 {sg['main_sub']['median']:.4f})",
+                         interp="다중 라벨 하위집단의 정보 손실"))
     if s4.get("pair_density"):
         tp = max(s4["pair_density"].items(), key=lambda x: x[1])
         rows.append(dict(layer="수치적", indicator="최대 HC 밀도",
@@ -932,7 +976,13 @@ def run_integrated_analysis(
     if s3:
         summary.append(dict(metric="임상 다중언급률", value=f"{s3['multi_mention_rate']:.1%}"))
     if s4:
-        summary.append(dict(metric="평균 ΔH", value=f"{s4['mean_info_loss']:.4f} bits"))
+        summary.append(dict(metric="전체 평균 ΔH (H_multi - H_single)", value=f"{s4['mean_info_loss']:.4f} bits"))
+        sg = s4.get("subgroup_stats", {})
+        if sg.get("main_only"):
+            summary.append(dict(metric="Main only (ΔH=0) n", value=f"{sg['main_only']['n']} ({sg['main_only']['pct']:.1f}%)"))
+        if sg.get("main_sub") and sg["main_sub"]["n"] > 0:
+            summary.append(dict(metric="Main+Sub 평균 ΔH", value=f"{sg['main_sub']['mean']:.4f} bits"))
+            summary.append(dict(metric="Main+Sub 중앙값 ΔH", value=f"{sg['main_sub']['median']:.4f} bits"))
     if s5 and s5.get("mismatch_rate"):
         summary.append(dict(metric="교량 불일치율", value=f"{s5['mismatch_rate']:.1%}"))
     if s5 and isinstance(s5.get("df_bridge_match"), pd.DataFrame) and not s5["df_bridge_match"].empty:
