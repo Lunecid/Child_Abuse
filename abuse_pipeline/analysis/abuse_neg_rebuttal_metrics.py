@@ -30,6 +30,34 @@ def _iter_records(json_obj: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _canonicalize_json_files(json_files: list[str]) -> list[str]:
+    """
+    common.py에 canonicalize_json_files가 없는 구버전 환경도 지원한다.
+    """
+    fn = getattr(C, "canonicalize_json_files", None)
+    if callable(fn):
+        try:
+            return fn(json_files)
+        except Exception:
+            pass
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for x in json_files:
+        try:
+            p = Path(str(x)).expanduser().resolve()
+        except Exception:
+            continue
+        if not p.is_file() or p.suffix.lower() != ".json":
+            continue
+        s = str(p)
+        if s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return sorted(out)
+
+
 def _pair_tuple(a: str, b: str) -> tuple[str, str]:
     if C.SEVERITY_RANK.get(a, 999) <= C.SEVERITY_RANK.get(b, 999):
         return a, b
@@ -543,7 +571,7 @@ def run_abuse_neg_rebuttal_metrics(
     bridge_count_min: int = 5,
 ) -> dict[str, Any]:
     os.makedirs(out_dir, exist_ok=True)
-    json_files = C.canonicalize_json_files(json_files)
+    json_files = _canonicalize_json_files(json_files)
 
     rec_df = _collect_neg_records(
         json_files=json_files,
