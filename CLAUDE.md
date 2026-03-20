@@ -16,55 +16,61 @@ This is a **child abuse detection and analysis research pipeline** (v28 Refactor
 
 ```
 Child_Abuse_Lab/
-├── run_v28_refactor.py                 # Main entry point: runs full pipeline (ALL + NEG_ONLY)
-├── run_neg_gt_multilabel.py            # Standalone: multi-label vs single-label classifier comparison
-├── extract_threshold_statistics.py     # Standalone: threshold justification statistics for appendix
-├── data/                               # Input JSON files (not committed; place *.json here)
+├── run_v28_refactor.py                    # Main entry point: runs full pipeline (ALL + NEG_ONLY)
+├── run_neg_gt_multilabel.py               # Standalone: multi-label vs single-label classifier comparison
+├── run_softlabel_vs_singlelabel.py        # Standalone: soft-label vs single-label analysis
+├── run_gt_alg_gap_diagnosis.py            # Standalone: GT-Algorithm gap diagnosis
+├── run_abuse_neg_rebuttal_metrics.py      # Standalone: negative-group rebuttal metrics
+├── extract_threshold_statistics.py        # Standalone: threshold justification statistics for appendix
+├── data/                                  # Input JSON files (not committed; place *.json here)
 │
-└── abuse_pipeline/                     # Main Python package
-    ├── __init__.py                     # Backward-compatible re-exports + sys.modules shim
-    ├── pipeline.py                     # Orchestrator: 9-stage pipeline (run_pipeline())
+└── abuse_pipeline/                        # Main Python package
+    ├── __init__.py                        # Backward-compatible re-exports + sys.modules shim
+    ├── pipeline.py                        # Orchestrator: 10-stage pipeline (run_pipeline())
     │
-    ├── core/                           # Core utilities (shared across all modules)
-    │   ├── common.py                   # Global config, constants, thresholds, optional dependency flags
-    │   ├── labels.py                   # classify_child_group(), classify_abuse_main_sub()
-    │   ├── text.py                     # extract_child_speech(), tokenize_korean(), bridge utterance extraction
-    │   └── plots.py                    # Visualization: radar charts, treemaps, TF-IDF logistic regression
+    ├── core/                              # Core utilities (shared across all modules)
+    │   ├── common.py                      # Global config, constants, thresholds, TFIDF_PARAMS
+    │   ├── labels.py                      # classify_child_group(), classify_abuse_main_sub()
+    │   ├── text.py                        # extract_child_speech(), tokenize_korean(), bridge utterance extraction
+    │   └── plots.py                       # Visualization: radar charts, treemaps, TF-IDF logistic regression
     │
-    ├── data/                           # Data processing modules
-    │   ├── counting.py                 # GT-based abuse type counting (raw labels only)
-    │   ├── doc_level.py                # Document-level frequency tables, permutation tests, bootstrap
-    │   └── embedding.py                # Word2Vec / FastText training and projection
+    ├── data/                              # Data processing modules
+    │   ├── counting.py                    # GT-based abuse type counting (raw labels only)
+    │   ├── doc_level.py                   # Document-level frequency tables, permutation tests, bootstrap
+    │   └── embedding.py                   # Word2Vec / FastText training and projection
     │
-    ├── stats/                          # Statistical analysis
-    │   ├── stats.py                    # HHI, cosine similarity, chi-square, log-odds, BH-FDR, bridge detection
-    │   ├── ca.py                       # Correspondence Analysis (CA) with bridge word overlays
+    ├── stats/                             # Statistical analysis
+    │   ├── stats.py                       # HHI, cosine similarity, chi-square, log-odds, BH-FDR, bridge detection
+    │   ├── ca.py                          # Correspondence Analysis (CA) with bridge word overlays
     │   ├── bridge_threshold_justification.py  # 3-strategy bridge threshold validation
-    │   ├── contextual_embedding_ca.py  # BERT embedding CA validation (Procrustes + Mantel)
-    │   └── weighted_ca_extension.py    # Weighted CA with sub-abuse type contributions
+    │   ├── contextual_embedding_ca.py     # BERT embedding CA validation (Procrustes + Mantel)
+    │   └── weighted_ca_extension.py       # Weighted CA with sub-abuse type contributions
     │
-    ├── classifiers/                    # Machine learning classifiers
-    │   ├── classifier_utils.py         # Shared TF-IDF + sklearn / BERT fine-tuning utilities
-    │   ├── tfidf_vs_bert_comparision.py  # TF-IDF vs BERT classifier comparison
-    │   ├── neg_gt_multilabel_analysis.py # Multi-label (main+sub) vs single-label comparison
-    │   ├── bert_hyperparameter.py      # BERT hyperparameter search
-    │   └── bert_abuse_coloring.py      # BERT word-level abuse type coloring
+    ├── classifiers/                       # Machine learning classifiers
+    │   ├── classifier_utils.py            # Shared TF-IDF + sklearn / BERT fine-tuning utilities
+    │   ├── tfidf_vs_bert_comparision.py   # TF-IDF vs BERT classifier comparison
+    │   ├── neg_gt_multilabel_analysis.py  # Multi-label (main+sub) vs single-label comparison
+    │   ├── softlabel_vs_singlelabel_analysis.py  # Soft-label vs single-label analysis
+    │   ├── bert_hyperparameter.py         # BERT hyperparameter grid search (9 combos)
+    │   └── bert_abuse_coloring.py         # BERT word-level abuse type coloring
     │
-    ├── analysis/                       # Extended analysis modules
-    │   ├── compare_abuse_labels.py     # GT vs algorithm label comparison
-    │   ├── label_comparsion_analysis.py  # Label comparison statistics
-    │   ├── main_sub_abuse_analysis.py  # Main + sub abuse type analysis
+    ├── analysis/                          # Extended analysis modules
+    │   ├── compare_abuse_labels.py        # GT vs algorithm label comparison
+    │   ├── label_comparsion_analysis.py   # Label comparison statistics
+    │   ├── main_sub_abuse_analysis.py     # Main + sub abuse type analysis
     │   ├── integrated_label_bridge_analysis.py  # 7-stage integrated analysis (standalone capable)
     │   ├── main_threshold_sensitivity.py  # Main abuse threshold sensitivity
-    │   └── sub_threshold_sensitivity.py   # Sub abuse threshold sensitivity
+    │   ├── sub_threshold_sensitivity.py   # Sub abuse threshold sensitivity
+    │   ├── gt_alg_gap_diagnosis.py        # GT-Algorithm gap diagnosis
+    │   └── abuse_neg_rebuttal_metrics.py  # Negative-group rebuttal metrics
     │
-    ├── investigation/                  # Exploratory / diagnostic modules
-    │   ├── borderline_case_explorer.py # Borderline cases (0 < max(A_k) <= 6)
-    │   └── no_gt.py                    # Cases with no ground-truth labels
+    ├── investigation/                     # Exploratory / diagnostic modules
+    │   ├── borderline_case_explorer.py    # Borderline cases (0 < max(A_k) <= 6)
+    │   └── no_gt.py                       # Cases with no ground-truth labels
     │
-    └── revision/                       # Paper revision extensions
-        ├── revision_extensions.py      # Threshold sensitivity, FDR re-report, multi-classifier comparison
-        └── revision_v2.py              # Appendix: soft labels, preprocessing robustness, GT bias check
+    └── revision/                          # Paper revision extensions
+        ├── revision_extensions.py         # Threshold sensitivity, FDR re-report, multi-classifier comparison
+        └── revision_v2.py                 # Appendix: soft labels, preprocessing robustness, GT bias check
 ```
 
 ## How to Run
@@ -80,6 +86,9 @@ python run_v28_refactor.py [--data_dir /path/to/json/files]
 ### Standalone Scripts
 ```bash
 python run_neg_gt_multilabel.py --data_dir /path/to/data [--skip_bert]
+python run_softlabel_vs_singlelabel.py --data_dir /path/to/data
+python run_gt_alg_gap_diagnosis.py --data_dir /path/to/data
+python run_abuse_neg_rebuttal_metrics.py --data_dir /path/to/data
 python extract_threshold_statistics.py
 ```
 
@@ -134,6 +143,66 @@ Each child gets a **main** type (score >6) and optional **sub** types (score >=4
 ### Bridge Words (교량 단어)
 Words appearing across multiple abuse types with similar probability:
 - `p1` (top P(abuse|word)) >= 0.40, `p2` (2nd) >= 0.25, `gap` (p1-p2) <= 0.20
+
+## ML Model Hyperparameters
+
+### TF-IDF (Global: `core/common.py` → `TFIDF_PARAMS`)
+
+All classifier modules reference this single dict for consistency:
+
+```python
+TFIDF_PARAMS = dict(
+    tokenizer    = str.split,      # Pre-tokenized text (Okt output), whitespace split
+    preprocessor = None,           # No sklearn preprocessing (already Okt-processed)
+    token_pattern= None,           # Must be None when custom tokenizer is used
+    ngram_range  = (1, 2),         # Unigram + bigram features
+    min_df       = 2,              # Minimum 2 documents (auto-relaxed to 1 if no terms)
+    max_features = 20000,          # Top 20k features by TF-IDF score
+)
+```
+
+Used in: `classifier_utils.py`, `tfidf_vs_bert_comparision.py`, `plots.py`, `revision_v2.py`, `softlabel_vs_singlelabel_analysis.py`
+
+### TF-IDF Classifiers (Single-label)
+
+| Classifier | Class | Key Params |
+|---|---|---|
+| LR | `LogisticRegression` | `solver="lbfgs"`, `max_iter=300` |
+| RF | `RandomForestClassifier` | `n_estimators=200`, `max_depth=None` |
+| SVM | `LinearSVC` | `max_iter=1000`, `dual="auto"` |
+
+### TF-IDF Classifiers (Multi-label / Binary Relevance)
+
+| Classifier | Class | Key Params |
+|---|---|---|
+| LR | `LogisticRegression` | `solver="liblinear"`, `max_iter=1000`, `class_weight="balanced"` |
+| RF | `RandomForestClassifier` | `n_estimators=200`, `class_weight="balanced"` |
+| SVM | `LinearSVC` | `max_iter=1000`, `class_weight="balanced"` |
+
+### TF-IDF + Multinomial Logistic Regression (Stage 6, `plots.py`)
+
+```python
+LogisticRegression(multi_class="multinomial", solver="lbfgs", max_iter=300)
+```
+
+### KLUE-BERT Fine-tuning
+
+| Param | Default | Grid Search Range |
+|---|---|---|
+| `model_name` | `klue/bert-base` | — |
+| `max_length` | 256 | — |
+| `batch_size` | 16 | — |
+| `epochs` | 10 | [3, 5, 10] |
+| `learning_rate` | 2e-5 | [1e-5, 2e-5, 5e-5] |
+| `weight_decay` | 0.01 | — |
+| `warmup_ratio` | 0.1 (of total steps) | — |
+| `grad_clip` | 1.0 | — |
+
+### Evaluation Protocol
+
+- Stratified K-Fold CV: `n_splits=5`, `shuffle=True`, `random_state=42`
+- Metrics: Accuracy, Macro F1, Weighted F1, Cohen's κ, per-label P/R/F1
+- Confusion matrix + ambiguity zone analysis (cross-classifier disagreement)
 
 ## Architecture Patterns
 
