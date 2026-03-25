@@ -31,6 +31,7 @@ from abuse_pipeline.core.text import extract_child_speech, tokenize_korean
 from abuse_pipeline.stats.stats import (
     compute_chi_square, add_bh_fdr, compute_log_odds,
     compute_prob_bridge_for_words,
+    merge_permutation_pvalues,
 )
 from abuse_pipeline.stats.ca import run_abuse_ca_with_prob_bridges
 
@@ -444,6 +445,7 @@ def run_fdr_significance_report(
     analysis_name: str = "abuse",
     alpha_levels: list[float] = None,
     out_dir: str = "revision_output/fdr_report",
+    df_perm: pd.DataFrame | None = None,
 ):
     """
     요구사항 2: 다중비교 보정(FDR) 적용 결과 보고.
@@ -456,6 +458,7 @@ def run_fdr_significance_report(
       (b) BH-FDR 보정 후 유의미 토큰 수
       (c) 각 α 수준(0.05, 0.01, 0.001)별 비교표
       (d) 보정으로 탈락한 토큰 목록
+      (e) 순열 p-value 기반 FDR 보정 결과 (df_perm이 제공된 경우)
 
     Parameters
     ----------
@@ -469,6 +472,10 @@ def run_fdr_significance_report(
         검증할 유의수준 목록
     out_dir : str
         결과 저장 디렉토리
+    df_perm : pd.DataFrame or None
+        run_doc_level_label_shuffle_permutation()의 반환값.
+        columns ⊇ ["word", "p_perm"].
+        제공되면 순열 p-value 기반 FDR 보정 결과도 함께 보고한다.
 
     Returns
     -------
@@ -486,8 +493,14 @@ def run_fdr_significance_report(
     # χ² 통계량 + p-value 계산
     chi_df = compute_chi_square(df_counts, group_cols)
 
-    # BH-FDR 보정 적용
+    # BH-FDR 보정 적용 (해석적 p-value)
     chi_df = add_bh_fdr(chi_df, p_col="p_value", out_col="p_fdr_bh")
+
+    # 순열 p-value 병합 + BH-FDR 보정 (df_perm이 제공된 경우)
+    has_perm = False
+    if df_perm is not None and not df_perm.empty:
+        chi_df = merge_permutation_pvalues(chi_df, df_perm)
+        has_perm = chi_df["p_perm"].notna().any()
 
     total_tokens = len(chi_df)
 
@@ -498,7 +511,7 @@ def run_fdr_significance_report(
         n_fdr = int((chi_df["p_fdr_bh"] < alpha).sum())
         n_dropped = n_raw - n_fdr
 
-        summary_rows.append({
+        row = {
             "analysis": analysis_name,
             "alpha": alpha,
             "total_tokens_tested": total_tokens,
@@ -508,24 +521,41 @@ def run_fdr_significance_report(
             "pct_significant_fdr_q": n_fdr / total_tokens * 100 if total_tokens > 0 else 0,
             "n_dropped_by_fdr": n_dropped,
             "retention_rate_pct": n_fdr / n_raw * 100 if n_raw > 0 else np.nan,
-        })
+        }
+
+        # 순열 p-value 기반 결과 추가
+        if has_perm:
+            n_perm_raw = int((chi_df["p_perm"] < alpha).sum())
+            n_perm_fdr = int((chi_df["p_perm_fdr_bh"] < alpha).sum())
+            row["n_significant_perm_p"] = n_perm_raw
+            row["pct_significant_perm_p"] = n_perm_raw / total_tokens * 100 if total_tokens > 0 else 0
+            row["n_significant_perm_fdr_q"] = n_perm_fdr
+            row["pct_significant_perm_fdr_q"] = n_perm_fdr / total_tokens * 100 if total_tokens > 0 else 0
+
+        summary_rows.append(row)
 
     df_summary = pd.DataFrame(summary_rows)
     summary_path = os.path.join(out_dir, f"fdr_significance_summary_{analysis_name}.csv")
     df_summary.to_csv(summary_path, encoding="utf-8-sig", index=False)
     print(f"[저장] FDR 보정 전후 유의미 토큰 요약 → {summary_path}")
 
+    # ── 순열 p-value 기반 FDR 결과를 primary로 사용 (논문 기술과 일치) ──
+    p_col_primary = "p_perm" if has_perm else "p_value"
+    q_col_primary = "p_perm_fdr_bh" if has_perm else "p_fdr_bh"
+    p_label = "permutation" if has_perm else "analytical"
+    print(f"[FDR] primary p-value 소스: {p_label} ({p_col_primary} → {q_col_primary})")
+
     # ── α=0.05 기준 FDR로 탈락한 토큰 목록 ──
-    mask_raw_sig = chi_df["p_value"] < 0.05
-    mask_fdr_sig = chi_df["p_fdr_bh"] < 0.05
+    mask_raw_sig = chi_df[p_col_primary] < 0.05
+    mask_fdr_sig = chi_df[q_col_primary] < 0.05
     mask_dropped = mask_raw_sig & ~mask_fdr_sig
 
     df_dropped = chi_df[mask_dropped].copy()
-    df_dropped = df_dropped.sort_values("p_value")
+    df_dropped = df_dropped.sort_values(p_col_primary)
 
     dropped_path = os.path.join(out_dir, f"fdr_dropped_tokens_{analysis_name}_alpha005.csv")
     df_dropped.to_csv(dropped_path, encoding="utf-8-sig")
-    print(f"[저장] FDR 보정으로 탈락한 토큰 (α=0.05) → {dropped_path}")
+    print(f"[저장] FDR 보정으로 탈락한 토큰 (α=0.05, {p_label}) → {dropped_path}")
 
     # ── FDR 보정 후에도 유의한 토큰 목록 ──
     df_survived = chi_df[mask_fdr_sig].copy()
@@ -533,12 +563,15 @@ def run_fdr_significance_report(
 
     survived_path = os.path.join(out_dir, f"fdr_survived_tokens_{analysis_name}_alpha005.csv")
     df_survived.to_csv(survived_path, encoding="utf-8-sig")
-    print(f"[저장] FDR 보정 후 유의한 토큰 (α=0.05) → {survived_path}")
+    print(f"[저장] FDR 보정 후 유의한 토큰 (α=0.05, {p_label}) → {survived_path}")
 
     # ── 전체 토큰의 p-value vs q-value 비교표 ──
-    full_comparison = chi_df[["chi2", "p_value", "p_fdr_bh"]].copy()
-    full_comparison["significant_raw_005"] = (full_comparison["p_value"] < 0.05).astype(int)
-    full_comparison["significant_fdr_005"] = (full_comparison["p_fdr_bh"] < 0.05).astype(int)
+    comp_cols = ["chi2", "p_value", "p_fdr_bh"]
+    if has_perm:
+        comp_cols += ["p_perm", "p_perm_fdr_bh"]
+    full_comparison = chi_df[comp_cols].copy()
+    full_comparison["significant_raw_005"] = (chi_df[p_col_primary] < 0.05).astype(int)
+    full_comparison["significant_fdr_005"] = (chi_df[q_col_primary] < 0.05).astype(int)
     full_comparison = full_comparison.sort_values("chi2", ascending=False)
 
     full_path = os.path.join(out_dir, f"fdr_full_comparison_{analysis_name}.csv")
@@ -846,6 +879,7 @@ def run_all_revisions(
     df_text_abuse: pd.DataFrame = None,
     abuse_order: list[str] = None,
     base_out_dir: str | None = None,
+    df_perm: pd.DataFrame | None = None,
 ):
     """
     세 가지 리비전 요구사항을 한 번에 실행하는 통합 함수.
@@ -865,6 +899,9 @@ def run_all_revisions(
         학대유형 순서
     base_out_dir : str
         결과 저장 기본 디렉토리
+    df_perm : pd.DataFrame or None
+        run_doc_level_label_shuffle_permutation()의 반환값.
+        제공되면 요구사항 2에서 순열 p-value 기반 FDR 결과도 함께 보고.
     """
     if abuse_order is None:
         abuse_order = ["방임", "정서학대", "신체학대", "성학대"]
@@ -902,6 +939,7 @@ def run_all_revisions(
                 group_cols=abuse_order,
                 analysis_name="abuse",
                 out_dir=os.path.join(base_out_dir, "R2_fdr_report"),
+                df_perm=df_perm,
             )
             results["fdr_report"] = res2
         except Exception as e:
