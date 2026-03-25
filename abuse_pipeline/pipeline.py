@@ -20,7 +20,8 @@ from abuse_pipeline.core.text import (
 from abuse_pipeline.stats.stats import (
     compute_hhi_and_cosine, compute_chi_square, add_bh_fdr, compute_log_odds,
     compute_prob_bridge_for_words,
-    run_frequency_matched_baseline_for_bridge
+    run_frequency_matched_baseline_for_bridge,
+    merge_permutation_pvalues,
 )
 from abuse_pipeline.data.doc_level import (
     build_doc_level_valence_counts, build_abuse_doc_word_table, build_doc_level_abuse_counts,
@@ -91,6 +92,7 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
     # (A) doc-level abuse × 단어 테이블 + 라벨 셔플 퍼뮤테이션
     # -------------------------------------------------
     doc_word_df, doc_meta = None, None
+    df_perm_abuse = None  # 순열 검정 결과 (p_perm)를 후속 FDR에 사용
     try:
         doc_word_df, doc_meta = build_abuse_doc_word_table(
             json_files=json_files,
@@ -100,7 +102,7 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
         print(f"[WARN] build_abuse_doc_word_table 실패 → doc-level 분석 건너뜀: {e}")
 
     if doc_word_df is not None and not doc_word_df.empty:
-        run_doc_level_label_shuffle_permutation(
+        df_perm_abuse = run_doc_level_label_shuffle_permutation(
             doc_word_df=doc_word_df,
             doc_meta=doc_meta,
             n_perm=1000,
@@ -681,6 +683,10 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
             abuse_chi_doc = compute_chi_square(df_abuse_counts_doc, C.ABUSE_ORDER)
             abuse_chi_doc = add_bh_fdr(abuse_chi_doc, p_col="p_value", out_col="p_fdr_bh")  # ★ integrated Stage 0과 통일
 
+            # ★ 순열 p-value 병합 + BH-FDR 보정 (논문: "1,000회 라벨 순열 → 경험적 p → BH FDR")
+            if df_perm_abuse is not None and not df_perm_abuse.empty:
+                abuse_chi_doc = merge_permutation_pvalues(abuse_chi_doc, df_perm_abuse)
+
             _chi2_top_k = 200
             _chi_sorted = abuse_chi_doc.sort_values("chi2", ascending=False, kind="mergesort")
             # ★ kind="mergesort" → 동점(tie) 시 원래 인덱스 순서 유지 (안정 정렬)
@@ -1115,6 +1121,7 @@ def run_pipeline(json_files, subset_name: str = "ALL", only_negative: bool = Fal
         df_text_abuse=df_text_abuse_rev if not df_text_abuse_rev.empty else None,
         abuse_order=C.ABUSE_ORDER,
         base_out_dir=revision_out,
+        df_perm=df_perm_abuse,
     )
 
     # =================================================

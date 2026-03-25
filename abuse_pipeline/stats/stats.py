@@ -60,6 +60,44 @@ def compute_chi_square(df_counts, cols):
     return df_out.set_index("word")
 
 
+def merge_permutation_pvalues(chi_df, df_perm, p_perm_col="p_perm"):
+    """
+    순열 검정 결과(df_perm)의 경험적 p-value를 chi_df에 병합하고
+    BH-FDR 보정을 적용한다.
+
+    Parameters
+    ----------
+    chi_df : pd.DataFrame
+        index=word, columns ⊇ ["chi2", "p_value"].
+        compute_chi_square()의 반환값.
+    df_perm : pd.DataFrame
+        columns ⊇ ["word", "p_perm"].
+        run_doc_level_label_shuffle_permutation()의 반환값.
+    p_perm_col : str
+        df_perm에서 순열 p-value 열 이름.
+
+    Returns
+    -------
+    pd.DataFrame
+        chi_df에 p_perm, p_perm_fdr_bh 열이 추가된 DataFrame.
+    """
+    if df_perm is None or df_perm.empty:
+        return chi_df
+
+    # df_perm의 word를 인덱스로 변환하여 chi_df와 병합
+    perm_series = df_perm.set_index("word")[p_perm_col]
+    chi_df["p_perm"] = chi_df.index.map(perm_series)
+
+    # 순열 p-value에 BH-FDR 보정 적용
+    chi_df = add_bh_fdr(chi_df, p_col="p_perm", out_col="p_perm_fdr_bh")
+
+    n_merged = chi_df["p_perm"].notna().sum()
+    n_total = len(chi_df)
+    print(f"[PERM-MERGE] 순열 p-value 병합: {n_merged}/{n_total}개 단어에 p_perm 적용")
+
+    return chi_df
+
+
 def add_bh_fdr(df, p_col="p_value", out_col="p_fdr_bh"):
     """
     Benjamini–Hochberg FDR 보정.
