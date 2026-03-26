@@ -53,10 +53,12 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
-try:
-    matplotlib.rcParams['font.family'] = ['NanumGothic', 'DejaVu Sans']
-except:
-    pass
+import matplotlib.font_manager as _fm
+_available_fonts = {f.name for f in _fm.fontManager.ttflist}
+for _kfont in ['Apple SD Gothic Neo', 'AppleGothic', 'NanumGothic', 'Malgun Gothic']:
+    if _kfont in _available_fonts:
+        matplotlib.rcParams['font.family'] = [_kfont, 'DejaVu Sans']
+        break
 
 import warnings
 

@@ -287,3 +287,10 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm,python
+.claude/worktrees/
+data/
+results/
+veer28_all/
+veer28_negOnly/
+ver28_all/
+ver28_negOnly/

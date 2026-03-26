@@ -47,11 +47,13 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
-# 한글 폰트 설정 시도
-try:
-    matplotlib.rcParams['font.family'] = ['NanumGothic', 'DejaVu Sans']
-except:
-    pass
+# 한글 폰트 설정 시도: 실제 설치된 폰트만 사용
+import matplotlib.font_manager as _fm
+_available_fonts = {f.name for f in _fm.fontManager.ttflist}
+for _kfont in ['Apple SD Gothic Neo', 'AppleGothic', 'NanumGothic', 'Malgun Gothic']:
+    if _kfont in _available_fonts:
+        matplotlib.rcParams['font.family'] = [_kfont, 'DejaVu Sans']
+        break
 
 import warnings
 
