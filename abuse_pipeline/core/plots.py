@@ -567,7 +567,6 @@ def run_tfidf_multilogit_no_leak(
             (
                 "clf",
                 LogisticRegression(
-                    multi_class="multinomial",
                     solver="lbfgs",
                     max_iter=300,
                 ),
