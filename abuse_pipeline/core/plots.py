@@ -128,17 +128,19 @@ def set_korean_font(font_path: str | None = None):
         candidates.append(font_path)
     plt.rcParams["axes.unicode_minus"] = False
 
-    # 2) common platform fonts (Windows/macOS)
+    # 2) common platform fonts (Windows/macOS/Linux)
     candidates += [
         r"C:\Windows\Fonts\malgun.ttf",       # 맑은 고딕
         r"C:\Windows\Fonts\malgunsl.ttf",     # 맑은 고딕 Semilight
         r"C:\Windows\Fonts\NanumGothic.ttf",  # (있으면)
         r"C:\Windows\Fonts\batang.ttc",       # 바탕
         r"C:\Windows\Fonts\gulim.ttc",        # 굴림
+        "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
         "/System/Library/Fonts/AppleSDGothicNeo.ttc",
         "/Library/Fonts/AppleGothic.ttf",
-        "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
         "/Library/Fonts/NanumGothic.ttf",
+        os.path.expanduser("~/Library/Fonts/NanumGothic.ttf"),       # Homebrew
+        os.path.expanduser("~/Library/Fonts/NanumGothicBold.ttf"),   # Homebrew
     ]
 
     chosen = None
@@ -148,13 +150,16 @@ def set_korean_font(font_path: str | None = None):
             break
 
     if chosen:
+        fm.fontManager.addfont(chosen)
         font_name = fm.FontProperties(fname=chosen).get_name()
         plt.rcParams["font.family"] = font_name
+        print(f"[FONT] Korean font loaded: {font_name} ({chosen})")
     else:
         available = {f.name for f in fm.fontManager.ttflist}
         for name in ["AppleGothic", "NanumGothic", "Malgun Gothic", "Noto Sans CJK KR"]:
             if name in available:
                 plt.rcParams["font.family"] = name
+                print(f"[FONT] Korean font from system: {name}")
                 break
         else:
             # fallback: don't crash, but warn
