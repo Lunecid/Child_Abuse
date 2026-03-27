@@ -20,7 +20,7 @@ from abuse_pipeline.experiments.information_recovery import (
     IDX_TO_TYPE,
     _safe_fit_vectorizer,
     _fit_br_stage,
-    _build_fold_doc_counts,
+    build_doc_count_table_unified,
     _extract_bridge_words,
     _compute_bridge_score_matrix,
     _apply_bridge_reranking,
@@ -119,7 +119,7 @@ def run_recovery_ablation(
         br_scores = _fit_br_stage(X_train, y_train, X_test, config.random_state)
 
         # Bridge words
-        doc_counts = _build_fold_doc_counts(train_df, config.bridge_min_total_docs)
+        doc_counts = build_doc_count_table_unified(train_df, config.bridge_min_total_docs)
         bridge_df = _extract_bridge_words(doc_counts, config)
 
         # --- weighted ---
