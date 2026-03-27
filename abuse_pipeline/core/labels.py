@@ -172,18 +172,29 @@ def classify_abuse_main_sub(rec, abuse_order=ABUSE_ORDER,
                             sub_threshold=4,
                             use_clinical_text=True):
     """
-    상담사의 임상 정보 + 학대 관련 문항 점수를 이용해
-    - main_abuse : 핵심(주) 학대유형
-    - sub_abuses : 부 학대유형 리스트
-    를 추정.
+    임상가의 판단(GT)을 최우선으로 main 학대유형을 결정하고,
+    점수 기반으로 sub 학대유형을 할당한다.
+
+    Main 할당 우선순위:
+      1순위: info["학대의심"] (임상가 GT label)
+      2순위: 문항 점수 > 6인 유형 중 최고점 (기존 로직)
+      3순위: 임상 텍스트에서 발견된 학대유형 (기존 로직)
+
+    Sub 할당 (변경 없음):
+      main이 아닌 유형 중 점수 >= sub_threshold인 유형
+      + 임상 텍스트에서 발견된 추가 유형
 
     동점(tie) 시 _SEVERITY_RANK 위계를 적용하여 결정적(deterministic) 결과를 보장.
     위계: 성학대(0) > 신체학대(1) > 정서학대(2) > 방임(3)
     """
-    info = rec.get("info", {})
+    info = rec.get("info", {}) or {}
     main = None
     subs = set()
 
+    # ── 1순위: GT label 확인 ──
+    gt_main = _extract_gt_main(info, abuse_order)
+
+    # ── 점수 추출 (기존 로직 유지) ──
     abuse_scores = {a: 0 for a in abuse_order}
     for q in rec.get("list", []):
         if q.get("문항") == "학대여부":
@@ -199,19 +210,27 @@ def classify_abuse_main_sub(rec, abuse_order=ABUSE_ORDER,
                     if a in name:
                         abuse_scores[a] += sc
 
-    nonzero = {a: s for a, s in abuse_scores.items() if s > 6}
-    if nonzero:
-        # [FIX] deterministic tie-breaking: (점수, -심각도)
-        # 점수가 같으면 _SEVERITY_RANK가 작은(더 심각한) 유형 우선
-        main = max(nonzero,
-                   key=lambda a: (nonzero[a], -_SEVERITY_RANK.get(a, 999)))
+    # ── Main 할당: GT 우선, 없으면 점수 기반 ──
+    if gt_main is not None:
+        # 1순위: GT label
+        main = gt_main
+    else:
+        # 2순위: 점수 > 6인 유형 중 최고점 (기존 로직)
+        nonzero = {a: s for a, s in abuse_scores.items() if s > 6}
+        if nonzero:
+            # [FIX] deterministic tie-breaking: (점수, -심각도)
+            # 점수가 같으면 _SEVERITY_RANK가 작은(더 심각한) 유형 우선
+            main = max(nonzero,
+                       key=lambda a: (nonzero[a], -_SEVERITY_RANK.get(a, 999)))
 
+    # ── Sub 할당 (기존 로직 유지) ──
     for a, s in abuse_scores.items():
         if a == main:
             continue
         if s >= sub_threshold:
             subs.add(a)
 
+    # ── 임상 텍스트 보완 (기존 로직 유지) ──
     if use_clinical_text:
         clin_text = " ".join(
             str(info.get(k, "")) for k in ["임상진단", "임상가 종합소견"] if k in info
@@ -219,10 +238,12 @@ def classify_abuse_main_sub(rec, abuse_order=ABUSE_ORDER,
         for a in abuse_order:
             if a in clin_text:
                 if main is None:
+                    # 3순위: 임상 텍스트에서 발견
                     main = a
                 elif a != main:
                     subs.add(a)
 
+    # ── Fallback (기존 로직 유지) ──
     if main is None and subs:
         # [FIX] deterministic tie-breaking: (점수, -심각도)
         main = sorted(subs,
@@ -236,3 +257,90 @@ def classify_abuse_main_sub(rec, abuse_order=ABUSE_ORDER,
 
     # [FIX] subs도 심각도 순으로 정렬 (재현성 보장)
     return main, sorted(subs, key=lambda x: _SEVERITY_RANK.get(x, 999))
+
+
+# ── GT 추출 헬퍼 (labels.py 내부) ──
+
+# 표기 변형 정규화 맵 (compare_abuse_labels.py와 동일)
+_GT_CANON_MAP = {
+    "신체적학대": "신체학대",
+    "정서적학대": "정서학대",
+    "성적학대": "성학대",
+    "성폭력": "성학대",
+    "성폭행": "성학대",
+    "유기": "방임",
+}
+
+
+def _normalize_gt_label(label: str) -> str:
+    """GT 라벨 표기 변형을 표준형으로 정규화."""
+    import re
+    s = re.sub(r"\s+", "", str(label))
+    s = _GT_CANON_MAP.get(s, s)
+    if s.endswith("적학대"):
+        s = s.replace("적학대", "학대")
+    return _GT_CANON_MAP.get(s, s)
+
+
+def _gt_field_to_text(x) -> str:
+    """info["학대의심"] 값을 문자열로 변환 (다양한 타입 대응)."""
+    if x is None:
+        return ""
+    if isinstance(x, str):
+        return x
+    if isinstance(x, list):
+        return " ".join(_gt_field_to_text(v) for v in x)
+    if isinstance(x, dict):
+        for k in ("val", "text", "value"):
+            if k in x:
+                return _gt_field_to_text(x.get(k))
+        import json
+        return json.dumps(x, ensure_ascii=False)
+    return str(x)
+
+
+def _extract_gt_main(info: dict, abuse_order: list) -> str | None:
+    """
+    info["학대의심"] 필드에서 GT 학대유형을 추출한다.
+
+    compare_abuse_labels.py의 extract_gt_abuse_types_from_info()와
+    동일한 로직이지만, 순환 import 방지를 위해 인라인으로 구현.
+
+    여러 유형이 추출되면 SEVERITY_RANK 기준으로 가장 심각한 것을 main으로 선택.
+    """
+    import re
+
+    raw = info.get("학대의심", "")
+    text = _gt_field_to_text(raw)
+    text_nospace = re.sub(r"\s+", "", text)
+
+    if not text_nospace:
+        return None
+
+    found = set()
+
+    # 규칙 1: "[가-힣]+학대" 패턴
+    for m in re.findall(r"([가-힣]+?)학대", text_nospace):
+        cand = _normalize_gt_label(m + "학대")
+        if cand in abuse_order:
+            found.add(cand)
+
+    # 규칙 2: "방임", "유기"
+    if "방임" in text_nospace:
+        found.add("방임")
+    if "유기" in text_nospace:
+        found.add("방임")
+
+    # 규칙 3: 표준형 직접 매칭
+    for a in abuse_order:
+        if re.sub(r"\s+", "", a) in text_nospace:
+            found.add(a)
+
+    # 유효한 유형만 필터
+    found = {a for a in found if a in abuse_order}
+
+    if not found:
+        return None
+
+    # 여러 개면 SEVERITY_RANK 기준 가장 심각한 것 선택
+    return sorted(found, key=lambda x: _SEVERITY_RANK.get(x, 999))[0]
