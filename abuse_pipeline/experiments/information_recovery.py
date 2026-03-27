@@ -422,40 +422,76 @@ def _fit_cc_stage(
     return scores
 
 
-def _build_fold_doc_counts(
+def build_doc_count_table_unified(
     train_df: pd.DataFrame,
-    min_total_docs: int = 5,
+    min_total_docs: int = C.MIN_DOC_COUNT,
+    main_col: str = "gt_main",
 ) -> pd.DataFrame:
     """
-    fold의 학습 데이터로부터 문서-수준 단어별 학대유형 빈도표 구축.
+    메인 파이프라인의 build_abuse_doc_word_table() + pivot과 동일한 결과를 생성.
 
-    build_doc_level_abuse_counts() (data/doc_level.py) 와 동일한 형식:
-      - index: word
-      - columns: ABUSE_ORDER (성학대, 신체학대, 정서학대, 방임)
-      - values: 문서 빈도 (해당 단어를 사용한 아동 수)
-    유일한 차이: 학대 유형 출처가 GT (gt_main).
+    메인 파이프라인과의 일관성:
+      - doc_level.py의 build_abuse_doc_word_table()은 JSON을 직접 읽지만,
+        여기서는 이미 구축된 train_df에서 동일한 정보를 추출한다.
+      - train_df["text"]는 tokenize_korean() 결과의 join이므로,
+        split()하면 원래 토큰 목록이 복원된다.
+      - 문서당 고유 단어만 카운트 (set 사용) — doc_level.py와 동일.
+
+    Parameters
+    ----------
+    train_df : pd.DataFrame
+        columns: doc_id, text (토큰화 완료), gt_main, ...
+    min_total_docs : int
+        전체 문서 빈도가 이 값 미만인 단어는 제외 (= MIN_DOC_COUNT)
+    main_col : str
+        main label 컬럼명. "gt_main"이면 GT 사용.
+
+    Returns
+    -------
+    pd.DataFrame
+        index = word, columns = ABUSE_ORDER (= [성학대, 신체학대, 정서학대, 방임])
+        값 = 해당 학대유형 문서에서 해당 단어가 출현한 문서 수
+
+        이 형식은 메인 파이프라인에서 ca.py가 받는 df_abuse_counts와 동일하며,
+        compute_chi_square(), compute_log_odds(), compute_prob_bridge_for_words()에
+        직접 전달할 수 있다.
     """
     rows = []
-    for _, row in train_df.iterrows():
-        gt_main = row["gt_main"]
-        tokens = set(str(row["text"]).split())
-        for tok in tokens:
-            rows.append({"word": tok, "abuse": gt_main})
+    for row in train_df.itertuples(index=False):
+        main_label = getattr(row, main_col)
+        if main_label not in C.ABUSE_ORDER:
+            continue
+        # set() → 문서당 1회 카운트 (doc_level.py와 동일)
+        tokens = set(str(getattr(row, "text", "")).split())
+        if not tokens:
+            continue
+        for word in tokens:
+            rows.append({"word": word, "abuse": main_label})
 
     if not rows:
         return pd.DataFrame(columns=list(C.ABUSE_ORDER))
 
-    raw = pd.DataFrame(rows)
-    ct = raw.groupby(["word", "abuse"]).size().unstack("abuse").fillna(0)
-    for a in C.ABUSE_ORDER:
-        if a not in ct.columns:
-            ct[a] = 0
-    ct = ct[list(C.ABUSE_ORDER)]
-    ct["total_docs"] = ct.sum(axis=1)
-    ct = ct[ct["total_docs"] >= min_total_docs]
-    ct = ct.drop(columns=["total_docs"])
+    # pivot: long format → word × abuse 빈도 테이블
+    count_df = (
+        pd.DataFrame(rows)
+        .groupby(["word", "abuse"])
+        .size()
+        .unstack("abuse")
+        .fillna(0)
+        .astype(int)
+    )
 
-    return ct
+    # ABUSE_ORDER에 없는 컬럼 보충
+    for label in C.ABUSE_ORDER:
+        if label not in count_df.columns:
+            count_df[label] = 0
+    count_df = count_df[list(C.ABUSE_ORDER)]
+
+    # 최소 문서 빈도 필터 (= doc_level.py의 min_doc_count)
+    count_df["total_docs"] = count_df.sum(axis=1)
+    count_df = count_df[count_df["total_docs"] >= min_total_docs].drop(columns="total_docs")
+
+    return count_df
 
 
 def _extract_bridge_words(
@@ -466,11 +502,17 @@ def _extract_bridge_words(
     fold 학습 데이터에서 브릿지 워드 추출.
     pipeline.py lines 682-707과 동일한 로직.
 
-    흐름:
+    호출 체인:
       1) compute_log_odds  → 안정성 필터용 (pipeline line 682)
       2) compute_chi_square + add_bh_fdr → 후보 선정 (pipeline lines 683-684)
       3) 상위 chi_top_k개 안정 정렬 (pipeline line 691, kind="mergesort")
       4) compute_prob_bridge_for_words → 최종 브릿지 필터 (pipeline lines 697-707)
+
+    경로 1(메인 파이프라인)과의 일관성 검증:
+      - count_df의 형식: index=word, columns=ABUSE_ORDER → 동일
+      - chi_top_k=200 → ca.py의 top_chi_for_ca=200과 동일
+      - min_p1/min_p2/max_gap: C.BRIDGE_MIN_P1/P2/MAX_GAP과 동일 값 사용
+      - count_min: C.BRIDGE_MIN_COUNT (=5) 와 동일
     """
     from abuse_pipeline.stats.stats import (
         compute_chi_square,
@@ -484,24 +526,34 @@ def _extract_bridge_words(
     if doc_counts.empty:
         return _empty
 
-    # --- pipeline line 682: 로그오즈비 (전체 빈도표) ---
+    # ── 1단계: 로그오즈비 (전체 빈도표) ── pipeline line 682
     logodds_df = compute_log_odds(doc_counts, C.ABUSE_ORDER)
 
-    # --- pipeline line 683: 카이제곱 (전체 빈도표) ---
+    # ── 2단계: 카이제곱 (전체 빈도표) ── pipeline line 683
     chi_df = compute_chi_square(doc_counts, C.ABUSE_ORDER)
     if chi_df.empty:
         return _empty
 
-    # --- pipeline line 684: BH-FDR 보정 ---
+    # ── BH-FDR 보정 ── pipeline line 684
     chi_df = add_bh_fdr(chi_df, p_col="p_value", out_col="p_fdr_bh")
 
-    # --- pipeline line 691: 상위 chi_top_k 후보 (안정 정렬) ---
+    # ── 3단계: 상위 chi_top_k 후보 (안정 정렬) ── pipeline line 691
     chi_sorted = chi_df.sort_values("chi2", ascending=False, kind="mergesort")
     candidate_words = chi_sorted.head(
         min(config.chi_top_k, len(chi_sorted))
     ).index.tolist()
 
-    # --- pipeline lines 697-707: 브릿지 필터 ---
+    # ── 디버그 로그 (경로 일관성 확인용) ──
+    print(f"    [BRIDGE] count_df: {len(doc_counts)} words")
+    print(f"    [BRIDGE] chi_top_k={config.chi_top_k}, candidates={len(candidate_words)}")
+
+    # ── 4단계: 브릿지 필터 ── pipeline lines 697-707
+    #   ca.py의 호출과 동일한 파라미터:
+    #     min_p1=C.BRIDGE_MIN_P1 (0.40)
+    #     min_p2=C.BRIDGE_MIN_P2 (0.25)
+    #     max_gap=C.BRIDGE_MAX_GAP (0.20)
+    #     count_min=C.BRIDGE_MIN_COUNT (5)
+    #     logodds_min=None, z_min=None
     bridge_df = compute_prob_bridge_for_words(
         df_counts=doc_counts,
         words=candidate_words,
@@ -513,6 +565,18 @@ def _extract_bridge_words(
         count_min=config.bridge_count_min,
         z_min=None,
     )
+
+    # ── 디버그 로그 ──
+    n_bridge = bridge_df["word"].nunique() if not bridge_df.empty else 0
+    print(f"    [BRIDGE] min_p1={config.bridge_min_p1}, min_p2={config.bridge_min_p2}, "
+          f"max_gap={config.bridge_max_gap}, count_min={config.bridge_count_min}")
+    print(f"    [BRIDGE] result: {n_bridge} unique bridge words from {len(candidate_words)} candidates")
+
+    # ── 기대값 검증 ──
+    if n_bridge > 50:
+        print(f"    [BRIDGE] ⚠ WARNING: {n_bridge} bridge words is unexpectedly high. "
+              f"Expected 20-35. Check filter parameters.")
+
     return bridge_df
 
 
@@ -632,7 +696,7 @@ def _tune_bridge_params(
 
                 # Build bridge words from inner train
                 inner_train_df = train_df.iloc[inner_train]
-                doc_counts = _build_fold_doc_counts(inner_train_df, config.bridge_min_total_docs)
+                doc_counts = build_doc_count_table_unified(inner_train_df, config.bridge_min_total_docs)
                 bridge_df = _extract_bridge_words(doc_counts, config)
                 bridge_matrix = _compute_bridge_score_matrix(
                     X_va, inner_gt_idx, bridge_df, vec.get_feature_names_out().tolist()
@@ -744,7 +808,7 @@ def run_recovery_experiment(
         print(f"  Bridge params: λ={best_lam}, τ={best_tau}")
 
         # Bridge words from full train set
-        doc_counts = _build_fold_doc_counts(train_df, config.bridge_min_total_docs)
+        doc_counts = build_doc_count_table_unified(train_df, config.bridge_min_total_docs)
         bridge_df = _extract_bridge_words(doc_counts, config)
         bridge_matrix = _compute_bridge_score_matrix(
             X_test, gt_main_test, bridge_df, feature_names
