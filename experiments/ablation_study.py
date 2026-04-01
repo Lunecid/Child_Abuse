@@ -8,20 +8,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from experiments.multilabel_experiment import build_config, run_bridge_ablation_study
+from abuse_pipeline.experiments.ablation_study import cli_main
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run bridge-word ablations for the multilabel experiment.")
-    parser.add_argument("--source-root", type=str, default=None, help="Root of the original Child_Abuse repo.")
-    parser.add_argument("--output-dir", type=str, default=None, help="Directory for experiment outputs.")
-    return parser.parse_args()
+    parser = argparse.ArgumentParser(add_help=False)
+    _, remaining = parser.parse_known_args()
+    return argparse.Namespace(remaining=remaining)
 
 
 def main() -> None:
     args = parse_args()
-    config = build_config(source_root=args.source_root, output_dir=args.output_dir)
-    run_bridge_ablation_study(config)
+    cli_main(args.remaining)
 
 
 if __name__ == "__main__":

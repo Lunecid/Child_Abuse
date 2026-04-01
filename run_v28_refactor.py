@@ -33,7 +33,7 @@ def main():
         print(f"[WARN] JSON 파일이 없습니다: {data_dir}")
         return
 
-    run_pipeline(json_files, subset_name="ALL", only_negative=False)
+    # run_pipeline(json_files, subset_name="ALL", only_negative=False)
     run_pipeline(json_files, subset_name="NEG_ONLY", only_negative=True)
 
 if __name__ == "__main__":
