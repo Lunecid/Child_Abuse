@@ -47,8 +47,12 @@ from abuse_pipeline.analysis import sub_threshold_sensitivity
 from abuse_pipeline.investigation import no_gt
 from abuse_pipeline.investigation import borderline_case_explorer
 
+from abuse_pipeline.core import raw_score_distribution
+from abuse_pipeline.core import raw_score_entropy
+
 from abuse_pipeline.revision import revision_extensions
 from abuse_pipeline.revision import revision_v2
+from abuse_pipeline.revision import raw_score_evidence
 
 # ── sys.modules shim ──────────────────────────────────────────────
 # Allow `from abuse_pipeline.common import X` (module-path style)
@@ -82,8 +86,11 @@ _module_map = {
     "abuse_pipeline.sub_threshold_sensitivity": sub_threshold_sensitivity,
     "abuse_pipeline.no_gt": no_gt,
     "abuse_pipeline.borderline_case_explorer": borderline_case_explorer,
+    "abuse_pipeline.raw_score_distribution": raw_score_distribution,
+    "abuse_pipeline.raw_score_entropy": raw_score_entropy,
     "abuse_pipeline.revision_extensions": revision_extensions,
     "abuse_pipeline.revision_v2": revision_v2,
+    "abuse_pipeline.raw_score_evidence": raw_score_evidence,
 }
 for _key, _mod in _module_map.items():
     _sys.modules.setdefault(_key, _mod)
