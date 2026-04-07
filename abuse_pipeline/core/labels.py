@@ -19,6 +19,16 @@ def classify_child_group(
     info = rec.get("info", {})
     crisis = info.get("위기단계")
 
+    # --------------------------------------------------
+    # 0) 임상가 GT 최우선 채택
+    #    임상가가 학대의심 라벨(GT)을 부여한 사례는 무조건 부정군.
+    #    유효한 GT = ABUSE_ORDER에 속하는 유형만 인정.
+    #    이 규칙은 알고리즘 2의 GT 우선 원칙과 동일한 철학을 공유한다.
+    # --------------------------------------------------
+    gt_main = _extract_gt_main(info, ABUSE_ORDER)
+    if gt_main is not None:
+        return "부정"
+
     try:
         total_score = int(info.get("합계점수"))
     except (TypeError, ValueError):
