@@ -2,20 +2,15 @@
 # -*- coding: utf-8 -*-
 """debug_gt_1350_vs_1343.py
 ════════════════════════════════════════════════════════════════
-GT 사례 수 차이(1,350 vs 1,343) 진단 스크립트.
+GT 사례 수 차이 진단 스크립트.
 
-두 경로로 GT 사례를 뽑아서 차집합의 7건을 식별하고,
-각 사례의 상세 정보를 출력한다.
+비교 대상:
+  집합 A: 전체 아동 중 GT 라벨이 있는 사례 (NEG 여부 무관)
+  집합 B: NEG(부정군) 내에서 GT 라벨이 있는 사례
 
-경로 A (raw_score_distribution):
-  - info["학대의심"]에서 GT 라벨을 추출
-  - 위기단계 기반 간이 NEG 판정 → NEG 내 GT만 선택
-
-경로 B (기존 파이프라인 = revision_v2.build_docs):
-  - classify_child_group() 으로 정서군 판정 (Algorithm 1)
-  - classify_abuse_main_sub() 으로 main abuse 할당 (Algorithm 2)
-  - only_negative=True → 부정군만
-  - gt_mapped가 비어있지 않은 사례
+차집합 A - B = "GT 라벨이 있지만 NEG가 아닌 사례"
+→ 이 사례들의 상세 정보를 출력하여, 왜 GT가 있는데 부정군이
+  아닌지를 진단한다.
 
 실행:
   python debug_gt_1350_vs_1343.py --data_dir ./data
@@ -25,9 +20,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 import pandas as pd
@@ -38,16 +34,73 @@ for p in [_this.parent, _this.parent.parent]:
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-from abuse_pipeline.core.common import ABUSE_ORDER, DATA_JSON_DIR, SEVERITY_RANK
-from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
-from abuse_pipeline.core.raw_score_distribution import (
-    extract_raw_abuse_scores,
-    filter_by_corpus,
-    _extract_gt_labels,
-    _extract_abuse_scores_from_rec,
-    _read_json_any,
-    _iter_records,
-)
+from abuse_pipeline.core.common import ABUSE_ORDER, DATA_JSON_DIR
+
+# GT 추출용 로컬 헬퍼 (core.labels 비의존)
+_GT_CANON_MAP = {
+    "신체적학대": "신체학대", "정서적학대": "정서학대",
+    "성적학대": "성학대", "성폭력": "성학대", "성폭행": "성학대",
+    "유기": "방임",
+}
+
+
+def _to_text(x: Any) -> str:
+    if x is None: return ""
+    if isinstance(x, str): return x
+    if isinstance(x, list): return " ".join(_to_text(v) for v in x)
+    if isinstance(x, dict):
+        for k in ("val", "text", "value"):
+            if k in x: return _to_text(x.get(k))
+        return json.dumps(x, ensure_ascii=False)
+    return str(x)
+
+
+def _normalize_gt(label: str) -> str:
+    s = re.sub(r"\s+", "", str(label))
+    s = _GT_CANON_MAP.get(s, s)
+    if s.endswith("적학대"):
+        s = s.replace("적학대", "학대")
+    return _GT_CANON_MAP.get(s, s)
+
+
+def _extract_gt_labels(info: dict) -> Set[str]:
+    raw = info.get("학대의심", "")
+    text = _to_text(raw)
+    text_nospace = re.sub(r"\s+", "", text)
+    if not text_nospace:
+        return set()
+    found: Set[str] = set()
+    for m in re.findall(r"([가-힣]+?)학대", text_nospace):
+        cand = _normalize_gt(m + "학대")
+        if cand in set(ABUSE_ORDER):
+            found.add(cand)
+    if "방임" in text_nospace:
+        found.add("방임")
+    if "유기" in text_nospace:
+        found.add("방임")
+    for a in ABUSE_ORDER:
+        if re.sub(r"\s+", "", a) in text_nospace:
+            found.add(a)
+    return {a for a in found if a in set(ABUSE_ORDER)}
+
+
+def _extract_abuse_scores(rec: dict) -> Dict[str, int]:
+    scores = {a: 0 for a in ABUSE_ORDER}
+    for q in rec.get("list", []) or []:
+        if q.get("문항") != "학대여부":
+            continue
+        for it in q.get("list", []) or []:
+            name = it.get("항목")
+            try:
+                sc = int(it.get("점수"))
+            except (TypeError, ValueError):
+                sc = 0
+            if not isinstance(name, str):
+                continue
+            for a in ABUSE_ORDER:
+                if a in name:
+                    scores[a] += sc
+    return scores
 
 
 def _find_json_files(data_dir: str | Path) -> List[Path]:
@@ -57,7 +110,23 @@ def _find_json_files(data_dir: str | Path) -> List[Path]:
     return sorted(d.rglob("*.json"))
 
 
+def _read_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _iter_records(obj: Any) -> list:
+    if isinstance(obj, dict) and ("info" in obj or "list" in obj):
+        return [obj]
+    if isinstance(obj, list):
+        return [x for x in obj if isinstance(x, dict)]
+    return []
+
+
 def main(data_dir: str | None = None):
+    # Algorithm 1 import (NEG 판정용)
+    from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
+
     data_dir = data_dir or DATA_JSON_DIR
     json_files = _find_json_files(data_dir)
     print(f"JSON 파일 수: {len(json_files)}")
@@ -65,23 +134,17 @@ def main(data_dir: str | None = None):
         print("[ERROR] JSON 파일 없음. --data_dir 확인 필요.")
         return
 
-    # ══════════════════════════════════════════════════════════
-    #  경로 A: raw_score_distribution (간이 NEG + GT)
-    # ══════════════════════════════════════════════════════════
-    scores_df = extract_raw_abuse_scores(json_files=json_files)
-    gt_a_df = filter_by_corpus(scores_df, "GT")
-    gt_a_ids = set(gt_a_df["case_id"].tolist())
-    print(f"\n[경로 A] raw_score_distribution GT: {len(gt_a_ids)}명")
+    # ── 모든 사례를 순회하며 두 집합을 동시에 구성 ──────────
+    all_gt_ids: Set[str] = set()       # 집합 A: 전체 GT
+    neg_gt_ids: Set[str] = set()       # 집합 B: NEG 내 GT
+    case_details: Dict[str, dict] = {}
 
-    # ══════════════════════════════════════════════════════════
-    #  경로 B: 기존 파이프라인 (Algorithm 1 + 2 + GT)
-    # ══════════════════════════════════════════════════════════
-    gt_b_ids: Set[str] = set()
-    all_rec_info: Dict[str, Dict[str, Any]] = {}  # case_id → 상세 정보
+    n_total = 0
+    n_neg = 0
 
     for fp in json_files:
         try:
-            obj = _read_json_any(fp)
+            obj = _read_json(fp)
         except Exception:
             continue
 
@@ -91,6 +154,11 @@ def main(data_dir: str | None = None):
             if not case_id:
                 case_id = f"{fp.stem}__{ridx}"
             case_id = str(case_id)
+            n_total += 1
+
+            # GT 추출 (라벨 알고리즘 비의존)
+            gt_set = _extract_gt_labels(info)
+            has_gt = len(gt_set) > 0
 
             # Algorithm 1: 정서군 판정
             try:
@@ -98,258 +166,132 @@ def main(data_dir: str | None = None):
             except Exception:
                 valence = None
 
-            # NEG가 아니면 기존 파이프라인에서 탈락
-            if valence != "부정":
-                # 하지만 상세 정보는 저장 (차집합 분석용)
-                all_rec_info[case_id] = {
-                    "valence": valence,
-                    "crisis": info.get("위기단계"),
-                    "total_score": info.get("합계점수"),
-                    "main_abuse": None,
-                    "sub_abuses": [],
-                    "gt_raw": info.get("학대의심", ""),
-                    "a_scores": _extract_abuse_scores_from_rec(rec),
-                    "gt_labels": _extract_gt_labels(info),
-                    "rec": rec,  # 원본 저장
-                }
-                continue
+            is_neg = (valence == "부정")
+            if is_neg:
+                n_neg += 1
 
-            # Algorithm 2: 학대유형 할당
+            # Algorithm 2: 학대유형 (참고용)
             try:
                 main_abuse, subs = classify_abuse_main_sub(rec)
             except Exception:
-                main_abuse, subs = (None, [])
+                main_abuse, subs = None, []
 
-            # GT 라벨 추출 (revision_v2 방식)
-            gt_set = _extract_gt_labels(info)
+            a_scores = _extract_abuse_scores(rec)
 
-            a_scores = _extract_abuse_scores_from_rec(rec)
+            if has_gt:
+                all_gt_ids.add(case_id)
+                if is_neg:
+                    neg_gt_ids.add(case_id)
 
-            all_rec_info[case_id] = {
+            case_details[case_id] = {
                 "valence": valence,
                 "crisis": info.get("위기단계"),
                 "total_score": info.get("합계점수"),
                 "main_abuse": main_abuse,
                 "sub_abuses": list(subs or []),
                 "gt_raw": info.get("학대의심", ""),
-                "a_scores": a_scores,
                 "gt_labels": gt_set,
-                "rec": rec,
+                "a_scores": a_scores,
             }
 
-            # 기존 파이프라인에서 GT 보유 = gt_set이 비어있지 않음
-            if gt_set:
-                gt_b_ids.add(case_id)
-
-    print(f"[경로 B] 기존 파이프라인 NEG+GT: {len(gt_b_ids)}명")
-
     # ══════════════════════════════════════════════════════════
-    #  차집합 분석
+    #  결과 출력
     # ══════════════════════════════════════════════════════════
-    only_in_a = gt_a_ids - gt_b_ids  # A에만 있음 (raw에서는 GT인데 기존에서 아님)
-    only_in_b = gt_b_ids - gt_a_ids  # B에만 있음 (기존에서는 GT인데 raw에서 아님)
-    intersection = gt_a_ids & gt_b_ids
+    outside_neg = all_gt_ids - neg_gt_ids  # GT는 있지만 NEG가 아닌 사례
 
-    print(f"\n{'═' * 60}")
-    print(f"교집합: {len(intersection)}명")
-    print(f"A에만 (raw GT, 기존 탈락): {len(only_in_a)}명")
-    print(f"B에만 (기존 GT, raw 탈락): {len(only_in_b)}명")
-    print(f"{'═' * 60}")
+    print(f"\n{'═' * 65}")
+    print(f"전체 아동 수:                   {n_total}")
+    print(f"NEG(부정군) 아동 수:            {n_neg}")
+    print(f"[집합 A] 전체 GT 보유:          {len(all_gt_ids)}")
+    print(f"[집합 B] NEG 내 GT 보유:        {len(neg_gt_ids)}")
+    print(f"[A - B]  GT 있지만 NEG 밖:      {len(outside_neg)}")
+    print(f"{'═' * 65}")
 
-    # ── A에만 있는 사례 상세 ──
-    if only_in_a:
-        print(f"\n{'─' * 60}")
-        print(f"[A에만 존재] raw_score에서는 NEG+GT지만 기존 파이프라인에서 탈락한 사례")
-        print(f"{'─' * 60}")
-        for cid in sorted(only_in_a):
-            _print_case_detail(cid, all_rec_info, gt_a_df)
-
-    # ── B에만 있는 사례 상세 ──
-    if only_in_b:
-        print(f"\n{'─' * 60}")
-        print(f"[B에만 존재] 기존 파이프라인에서는 NEG+GT지만 raw에서 탈락한 사례")
-        print(f"{'─' * 60}")
-        for cid in sorted(only_in_b):
-            _print_case_detail(cid, all_rec_info, gt_a_df)
-
-    # ── 수치 차이 없는 경우 ──
-    if not only_in_a and not only_in_b:
-        print("\n✓ 두 경로의 GT 사례 집합이 완전히 일치합니다.")
-
-    # ══════════════════════════════════════════════════════════
-    #  불일치 원인 진단 요약
-    # ══════════════════════════════════════════════════════════
-    if only_in_a or only_in_b:
-        print(f"\n{'═' * 60}")
-        print("[진단 요약]")
-        _diagnose(only_in_a, only_in_b, all_rec_info)
-        print(f"{'═' * 60}")
-
-    # 결과 CSV 저장
-    _save_diff_csv(only_in_a, only_in_b, all_rec_info, Path(data_dir).parent)
-
-
-def _print_case_detail(
-    case_id: str,
-    info_map: Dict[str, Dict[str, Any]],
-    gt_a_df: pd.DataFrame,
-):
-    """한 사례의 상세 정보를 출력한다."""
-    print(f"\n--- {case_id} ---")
-    detail = info_map.get(case_id)
-    if detail is None:
-        print("  (상세 정보 없음)")
+    if not outside_neg:
+        print("\n✓ 모든 GT 사례가 NEG 내에 있습니다. 차이 없음.")
         return
 
-    crisis = detail.get("crisis", "?")
-    total = detail.get("total_score", "?")
-    valence = detail.get("valence", "?")
-    main_abuse = detail.get("main_abuse", "?")
-    subs = detail.get("sub_abuses", [])
-    gt_raw = detail.get("gt_raw", "")
-    gt_labels = detail.get("gt_labels", set())
-    a_scores = detail.get("a_scores", {})
+    # ── 각 사례 상세 출력 ─────────────────────────────────────
+    print(f"\n{'─' * 65}")
+    print(f"GT 라벨이 있지만 부정군(NEG)이 아닌 {len(outside_neg)}건의 상세:")
+    print(f"{'─' * 65}")
 
-    a_neglect = a_scores.get("방임", 0)
-    a_emotional = a_scores.get("정서학대", 0)
-    a_physical = a_scores.get("신체학대", 0)
-    a_sexual = a_scores.get("성학대", 0)
+    valence_counts: Dict[str, int] = {}
 
-    print(f"  위기단계(L) = {crisis}")
-    print(f"  합계점수(S) = {total}")
-    print(f"  Algorithm 1 결과(정서군) = {valence}")
-    print(f"  Algorithm 2 결과(main)  = {main_abuse}")
-    print(f"  Algorithm 2 결과(subs)  = {subs}")
-    print(f"  A_k = (방임={a_neglect}, 정서={a_emotional}, 신체={a_physical}, 성={a_sexual})")
-    print(f"  info['학대의심'] (raw) = {gt_raw!r}")
-    print(f"  GT 라벨 추출 결과 = {gt_labels}")
+    for cid in sorted(outside_neg):
+        d = case_details[cid]
+        crisis = d["crisis"]
+        total = d["total_score"]
+        valence = d["valence"]
+        main_abuse = d["main_abuse"]
+        subs = d["sub_abuses"]
+        gt_raw = d["gt_raw"]
+        gt_labels = d["gt_labels"]
+        a = d["a_scores"]
 
-    # raw_score_distribution에서의 멤버십
-    row = gt_a_df[gt_a_df["case_id"] == case_id]
-    if not row.empty:
-        membership = row.iloc[0].get("corpus_membership", set())
-        print(f"  raw_score membership = {membership}")
-    else:
-        # scores_df 전체에서 찾기
-        print(f"  raw_score membership = (GT 집합에 없음)")
+        valence_counts[valence] = valence_counts.get(valence, 0) + 1
 
-    # 불일치 원인 힌트
-    neg_crisis = {"응급", "위기아동", "학대의심", "상담필요"}
-    raw_is_neg = (crisis in neg_crisis) or (
-        isinstance(total, (int, float)) and total >= 45
-    )
-    algo1_is_neg = (valence == "부정")
+        print(f"\n--- {cid} ---")
+        print(f"  정서군(Algorithm 1) = {valence}")
+        print(f"  위기단계            = {crisis}")
+        print(f"  합계점수            = {total}")
+        print(f"  학대유형(Algo 2)    = main={main_abuse}, subs={subs}")
+        print(f"  A_k = 방임={a.get('방임',0)}, 정서={a.get('정서학대',0)}, "
+              f"신체={a.get('신체학대',0)}, 성={a.get('성학대',0)}")
+        print(f"  info['학대의심']    = {gt_raw!r}")
+        print(f"  GT 추출 결과        = {gt_labels}")
 
-    if raw_is_neg != algo1_is_neg:
-        print(f"  ⚠ NEG 판정 불일치: raw 간이={raw_is_neg}, Algorithm 1={algo1_is_neg}")
-        if algo1_is_neg and not raw_is_neg:
-            print(f"    → raw 간이 판정이 Algorithm 1보다 좁음 (위기단계={crisis}, 점수={total})")
-        elif raw_is_neg and not algo1_is_neg:
-            print(f"    → Algorithm 1이 부정으로 분류하지 않음 (보호요인/risk 조정 가능성)")
+        # 원인 힌트
+        if valence == "긍정":
+            print(f"  → 긍정군: Algorithm 1이 보호요인/낮은 점수로 긍정 판정")
+        elif valence == "평범":
+            print(f"  → 평범군: Algorithm 1이 경계 영역으로 판정")
+        elif valence is None:
+            print(f"  → 정서군 판정 실패 (None)")
 
+    # ── 요약 통계 ─────────────────────────────────────────────
+    print(f"\n{'═' * 65}")
+    print(f"[요약] GT 있지만 NEG 밖인 {len(outside_neg)}건의 정서군 분포:")
+    for v, cnt in sorted(valence_counts.items(), key=lambda x: -x[1]):
+        print(f"  {v}: {cnt}건")
 
-def _diagnose(
-    only_in_a: set,
-    only_in_b: set,
-    info_map: Dict[str, Dict[str, Any]],
-):
-    """불일치의 체계적 원인 분류."""
-    reasons_a = {"neg_mismatch": [], "gt_mismatch": [], "unknown": []}
-    reasons_b = {"neg_mismatch": [], "gt_mismatch": [], "unknown": []}
+    print(f"\n[해석]")
+    print(f"  이 사례들은 임상가가 학대의심 라벨(GT)을 부여했지만,")
+    print(f"  Algorithm 1(정서군 분류)에서 부정군으로 분류되지 않은 아동이다.")
+    print(f"  즉, 임상가 판단(학대 의심)과 알고리즘 판단(비부정군)이 불일치한다.")
+    print(f"{'═' * 65}")
 
-    neg_crisis = {"응급", "위기아동", "학대의심", "상담필요"}
-
-    for cid in only_in_a:
-        d = info_map.get(cid, {})
-        valence = d.get("valence")
-        crisis = d.get("crisis")
-        total = d.get("total_score", 0)
-        try:
-            total = int(total) if total else 0
-        except (TypeError, ValueError):
-            total = 0
-
-        raw_neg = (crisis in neg_crisis) or (total >= 45)
-        algo_neg = (valence == "부정")
-
-        if raw_neg and not algo_neg:
-            reasons_a["neg_mismatch"].append(cid)
-        else:
-            reasons_a["unknown"].append(cid)
-
-    for cid in only_in_b:
-        d = info_map.get(cid, {})
-        valence = d.get("valence")
-        crisis = d.get("crisis")
-        total = d.get("total_score", 0)
-        try:
-            total = int(total) if total else 0
-        except (TypeError, ValueError):
-            total = 0
-
-        raw_neg = (crisis in neg_crisis) or (total >= 45)
-        algo_neg = (valence == "부정")
-
-        if algo_neg and not raw_neg:
-            reasons_b["neg_mismatch"].append(cid)
-        else:
-            reasons_b["unknown"].append(cid)
-
-    if only_in_a:
-        print(f"\n[A에만 존재하는 {len(only_in_a)}건의 원인]")
-        if reasons_a["neg_mismatch"]:
-            print(f"  NEG 판정 불일치 (raw=NEG, Algo1≠부정): {len(reasons_a['neg_mismatch'])}건")
-            print(f"    → raw 간이 판정은 위기단계/점수만 보지만, Algorithm 1은 보호요인 등으로 부정 판정을 번복할 수 있음")
-        if reasons_a["unknown"]:
-            print(f"  기타/미분류: {len(reasons_a['unknown'])}건")
-
-    if only_in_b:
-        print(f"\n[B에만 존재하는 {len(only_in_b)}건의 원인]")
-        if reasons_b["neg_mismatch"]:
-            print(f"  NEG 판정 불일치 (Algo1=부정, raw≠NEG): {len(reasons_b['neg_mismatch'])}건")
-            print(f"    → Algorithm 1이 risk/보호요인으로 부정 판정했지만, 위기단계/점수 기준으로는 NEG 아님")
-        if reasons_b["unknown"]:
-            print(f"  기타/미분류: {len(reasons_b['unknown'])}건")
-
-
-def _save_diff_csv(
-    only_in_a: set,
-    only_in_b: set,
-    info_map: Dict[str, Dict[str, Any]],
-    base_dir: Path,
-):
-    """차집합 사례를 CSV로 저장한다."""
-    out_dir = base_dir / "outputs" / "revision" / "raw_score_evidence"
+    # ── CSV 저장 ──────────────────────────────────────────────
+    out_dir = Path(data_dir).parent / "outputs" / "revision" / "raw_score_evidence"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     rows = []
-    for cid in sorted(only_in_a | only_in_b):
-        d = info_map.get(cid, {})
-        a_scores = d.get("a_scores", {})
+    for cid in sorted(outside_neg):
+        d = case_details[cid]
+        a = d["a_scores"]
         rows.append({
             "case_id": cid,
-            "source": "A_only" if cid in only_in_a else "B_only",
-            "crisis": d.get("crisis"),
-            "total_score": d.get("total_score"),
-            "valence_algo1": d.get("valence"),
-            "main_abuse_algo2": d.get("main_abuse"),
-            "gt_raw": str(d.get("gt_raw", "")),
-            "gt_labels": str(d.get("gt_labels", set())),
-            "A_neglect": a_scores.get("방임", 0),
-            "A_emotional": a_scores.get("정서학대", 0),
-            "A_physical": a_scores.get("신체학대", 0),
-            "A_sexual": a_scores.get("성학대", 0),
+            "valence_algo1": d["valence"],
+            "crisis": d["crisis"],
+            "total_score": d["total_score"],
+            "main_abuse_algo2": d["main_abuse"],
+            "sub_abuses": str(d["sub_abuses"]),
+            "gt_raw": str(d["gt_raw"]),
+            "gt_labels": str(d["gt_labels"]),
+            "A_neglect": a.get("방임", 0),
+            "A_emotional": a.get("정서학대", 0),
+            "A_physical": a.get("신체학대", 0),
+            "A_sexual": a.get("성학대", 0),
         })
 
-    if rows:
-        df = pd.DataFrame(rows)
-        path = out_dir / "gt_diff_diagnosis.csv"
-        df.to_csv(path, index=False, encoding="utf-8-sig")
-        print(f"\n[SAVE] {path}")
+    df = pd.DataFrame(rows)
+    path = out_dir / "gt_outside_neg_diagnosis.csv"
+    df.to_csv(path, index=False, encoding="utf-8-sig")
+    print(f"\n[SAVE] {path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="GT 1350 vs 1343 진단")
+    parser = argparse.ArgumentParser(description="전체 GT vs NEG 내 GT 차이 진단")
     parser.add_argument("--data_dir", type=str, default=None)
     args = parser.parse_args()
     main(data_dir=args.data_dir)
