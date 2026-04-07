@@ -219,8 +219,13 @@ def extract_raw_abuse_scores(
                 membership.add("NEG")
                 if has_any_score:
                     membership.add("ABUSE_NEG")
-            if gt_label is not None:
-                membership.add("GT")
+                # GT는 NEG 내에서만 인정: 부정군이 아닌 사례의 GT 라벨은
+                # 본 분석의 대상이 아니므로 멤버십에서 제외한다.
+                if gt_label is not None:
+                    membership.add("GT")
+
+            # NEG 밖의 GT 라벨은 gt_label 컬럼에도 반영하지 않음
+            effective_gt = gt_label if is_neg else None
 
             rows.append({
                 "case_id": str(case_id),
@@ -228,7 +233,7 @@ def extract_raw_abuse_scores(
                 "A_emotional": a_scores.get("정서학대", 0),
                 "A_physical": a_scores.get("신체학대", 0),
                 "A_sexual": a_scores.get("성학대", 0),
-                "gt_label": gt_label,
+                "gt_label": effective_gt,
                 "corpus_membership": membership,
             })
 
