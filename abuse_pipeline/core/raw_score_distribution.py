@@ -1,15 +1,14 @@
 """raw_score_distribution.py
 ════════════════════════════════════════════════════════════════
-알고리즘 2(classify_abuse_main_sub)와 **독립적으로** 임상가 점수 분포를
-분석하는 모듈.  이름에 *raw*를 넣어 "표기 규약 이전의 원점수"임을 코드
-수준에서 명시한다.
+알고리즘 2(classify_abuse_main_sub)의 **산출물**(main, subs 라벨)과
+독립적으로 임상가 점수 분포를 분석하는 모듈.
 
-Import 금지 사항
-────────────────
-  core.labels 의 어떠한 심볼(classify_abuse_main_sub, classify_child_group,
-  SEVERITY_RANK 등)도 이 모듈에 들어와서는 **안 된다**.
-  이 제약은 "원점수 분석이 라벨링 알고리즘에 의존하지 않는다"는
-  코드-수준 보증을 제공한다.
+코퍼스 멤버십(NEG, ABUSE_NEG) 판정은 파이프라인과 동일한 함수를
+사용한다:
+  - NEG: classify_child_group(rec) == "부정"
+  - ABUSE_NEG: NEG AND classify_abuse_main_sub(rec)[0] is not None
+
+이렇게 해야 본 모듈의 사례 수가 파이프라인과 정확히 일치한다.
 
 제공 함수
 ─────────
@@ -30,8 +29,9 @@ from typing import Any, Dict, List, Optional, Sequence, Set
 import numpy as np
 import pandas as pd
 
-# ── 허용된 import: core.common에서 상수와 경로만 사용 ──────────
+# ── import: core.common 상수 + core.labels 코퍼스 판정 함수 ──────
 from abuse_pipeline.core.common import ABUSE_ORDER, DATA_JSON_DIR
+from abuse_pipeline.core.labels import classify_child_group, classify_abuse_main_sub
 
 # 영역 컬럼명 (DataFrame 내부 표현)
 _DOMAIN_COLS = ["A_neglect", "A_emotional", "A_physical", "A_sexual"]
@@ -203,21 +203,25 @@ def extract_raw_abuse_scores(
                         gt_label = a
                         break
 
-            # 코퍼스 멤버십 판정 (라벨 알고리즘 비의존)
+            # 코퍼스 멤버십 판정 — 파이프라인과 동일한 함수 사용
             membership: Set[str] = {"ALL"}
-            has_any_score = any(v > 0 for v in a_scores.values())
 
-            # 위기단계 기반 간이 부정 판정 (labels.py 비의존)
-            crisis = info.get("위기단계")
-            negative_crisis = {"응급", "위기아동", "학대의심", "상담필요"}
+            # NEG: classify_child_group (Algorithm 1)
             try:
-                total_score = int(info.get("합계점수"))
-            except (TypeError, ValueError):
-                total_score = 0
-            is_neg = (crisis in negative_crisis) or (total_score >= 45)
+                valence = classify_child_group(rec)
+            except Exception:
+                valence = None
+            is_neg = (valence == "부정")
+
+            # ABUSE_NEG: NEG + main_abuse 존재 (Algorithm 2)
+            main_abuse = None
             if is_neg:
                 membership.add("NEG")
-                if has_any_score:
+                try:
+                    main_abuse, _subs = classify_abuse_main_sub(rec)
+                except Exception:
+                    main_abuse = None
+                if main_abuse is not None:
                     membership.add("ABUSE_NEG")
 
             # GT 태그는 NEG와 독립적으로 부여한다.
