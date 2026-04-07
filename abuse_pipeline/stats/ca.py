@@ -527,12 +527,23 @@ def run_abuse_ca_with_prob_bridges(
 
                 ax.scatter([centroid[0]], [centroid[1]], s=180, marker="x", linewidths=2.0, zorder=4)
 
+        # abuse type별 고유 마커 (시각적 구분 강화)
+        _ABUSE_MARKERS = {
+            "성학대":   "D",   # Diamond
+            "신체학대": "^",   # Triangle up
+            "정서학대": "o",   # Circle
+            "방임":     "s",   # Square
+        }
+
         # abuse points + English labels
         for abuse_name, r in row_coords_2d.iterrows():
             x, y = float(r["Dim1"]), float(r["Dim2"])
             color = C.ABUSE_COLORS.get(abuse_name, "black")
-            ax.scatter([x], [y], marker="s", s=130, color=color, alpha=0.95, zorder=6)
-            ax.text(x, y, f"  {C.abuse_label(abuse_name, lang='en')}", fontsize=12, weight="bold", va="center", zorder=7)
+            mkr = _ABUSE_MARKERS.get(abuse_name, "s")
+            ax.scatter([x], [y], marker=mkr, s=160, color=color,
+                       edgecolors="black", linewidth=0.8, alpha=0.95, zorder=6)
+            ax.text(x, y, f"  {C.abuse_label(abuse_name, lang='en')}",
+                    fontsize=12, weight="bold", va="center", zorder=7)
 
         # word points + label in English (via disp_token)
         # 교량 단어: facecolor = k1(주 연관 유형) 색상, edgecolor = k2(부 연관 유형) 색상
@@ -578,9 +589,11 @@ def run_abuse_ca_with_prob_bridges(
         legend_handles = []
         for abuse_name in C.ABUSE_ORDER:
             color = C.ABUSE_COLORS.get(abuse_name, "black")
+            mkr = _ABUSE_MARKERS.get(abuse_name, "s")
             legend_handles.append(
-                Line2D([0], [0], marker="s", linestyle="None",
-                       markerfacecolor=color, markeredgecolor=color,
+                Line2D([0], [0], marker=mkr, linestyle="None",
+                       markerfacecolor=color, markeredgecolor="black",
+                       markeredgewidth=0.8,
                        label=C.abuse_label(abuse_name, lang="en"), markersize=10)
             )
         # Visual element descriptions
@@ -614,7 +627,7 @@ def run_abuse_ca_with_prob_bridges(
 
         ax.legend(
             handles=legend_handles,
-            loc="lower left",
+            loc="upper right",
             title="Abuse type",
             frameon=True,
             framealpha=0.92,
