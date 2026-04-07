@@ -375,10 +375,15 @@ def run_abuse_ca_with_prob_bridges(
     # -----------------------------------------------------------------
     xs_all = list(row_coords_2d["Dim1"]) + list(bary_df["Dim1_bary"])
     ys_all = list(row_coords_2d["Dim2"]) + list(bary_df["Dim2_bary"])
-    margin_x = (max(xs_all) - min(xs_all)) * 0.15 if xs_all else 1.0
-    margin_y = (max(ys_all) - min(ys_all)) * 0.15 if ys_all else 1.0
-    xmin, xmax = min(xs_all) - margin_x, max(xs_all) + margin_x
-    ymin, ymax = min(ys_all) - margin_y, max(ys_all) + margin_y
+    # aspect='equal' 유지를 위해 x/y 범위를 통일하고 여백을 축소
+    x_range = (max(xs_all) - min(xs_all)) if xs_all else 2.0
+    y_range = (max(ys_all) - min(ys_all)) if ys_all else 2.0
+    max_range = max(x_range, y_range)
+    x_center = (min(xs_all) + max(xs_all)) / 2 if xs_all else 0.0
+    y_center = (min(ys_all) + max(ys_all)) / 2 if ys_all else 0.0
+    half_span = max_range * (0.5 + 0.08)  # 8% margin (reduced from 15%)
+    xmin, xmax = x_center - half_span, x_center + half_span
+    ymin, ymax = y_center - half_span, y_center + half_span
 
     lam1 = lam2 = None
     if hasattr(ca, "explained_inertia_") and len(ca.explained_inertia_) >= 2:
@@ -500,6 +505,7 @@ def run_abuse_ca_with_prob_bridges(
         ax.axvline(0, linestyle="--", linewidth=0.6, alpha=0.45)
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
+        ax.set_aspect("equal", adjustable="datalim")
 
         # cluster connectivity emphasis
         if emphasize_clusters and hasattr(C, "ABUSE_CLUSTERS") and isinstance(C.ABUSE_CLUSTERS, dict):
@@ -568,7 +574,7 @@ def run_abuse_ca_with_prob_bridges(
                 lim=200,
             )
 
-        # legend (English labels)
+        # legend (English labels + visual element descriptions)
         legend_handles = []
         for abuse_name in C.ABUSE_ORDER:
             color = C.ABUSE_COLORS.get(abuse_name, "black")
@@ -577,6 +583,18 @@ def run_abuse_ca_with_prob_bridges(
                        markerfacecolor=color, markeredgecolor=color,
                        label=C.abuse_label(abuse_name, lang="en"), markersize=10)
             )
+        # Visual element descriptions
+        legend_handles.append(
+            Line2D([0], [0], marker="o", linestyle="None",
+                   markerfacecolor="gray", markeredgecolor="gray",
+                   label="Word token", markersize=6, alpha=0.7)
+        )
+        legend_handles.append(
+            Line2D([0], [0], marker="o", linestyle="None",
+                   markerfacecolor="gray", markeredgecolor="black",
+                   markeredgewidth=1.8,
+                   label="Bridge word (dual-color)", markersize=8)
+        )
 
         if lam1 is not None and lam2 is not None:
             xlabel = f"Dimension 1 ({lam1*100:.1f}% inertia)"
@@ -596,11 +614,12 @@ def run_abuse_ca_with_prob_bridges(
 
         ax.legend(
             handles=legend_handles,
-            loc="upper right",
-            bbox_to_anchor=(1.24, 1.02),
-            title="Maltreatment type",
+            loc="lower left",
+            title="Abuse type",
             frameon=True,
-            framealpha=0.95,
+            framealpha=0.92,
+            fontsize=9,
+            title_fontsize=10,
         )
 
         ax.grid(True, alpha=0.20)

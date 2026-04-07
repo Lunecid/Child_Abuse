@@ -219,13 +219,13 @@ def extract_raw_abuse_scores(
                 membership.add("NEG")
                 if has_any_score:
                     membership.add("ABUSE_NEG")
-                # GT는 NEG 내에서만 인정: 부정군이 아닌 사례의 GT 라벨은
-                # 본 분석의 대상이 아니므로 멤버십에서 제외한다.
-                if gt_label is not None:
-                    membership.add("GT")
 
-            # NEG 밖의 GT 라벨은 gt_label 컬럼에도 반영하지 않음
-            effective_gt = gt_label if is_neg else None
+            # GT 태그는 NEG와 독립적으로 부여한다.
+            # 원점수 경험적 분포 분석(Section 2.2)은 알고리즘 1 적용 이전의
+            # 현상을 관찰하므로, "임상가 GT가 존재하는 사례" 전체가 대상이다.
+            # (참고: 알고리즘 1 수정 후 GT 보유 사례는 자동으로 NEG에도 포함됨)
+            if gt_label is not None:
+                membership.add("GT")
 
             rows.append({
                 "case_id": str(case_id),
@@ -233,7 +233,7 @@ def extract_raw_abuse_scores(
                 "A_emotional": a_scores.get("정서학대", 0),
                 "A_physical": a_scores.get("신체학대", 0),
                 "A_sexual": a_scores.get("성학대", 0),
-                "gt_label": effective_gt,
+                "gt_label": gt_label,
                 "corpus_membership": membership,
             })
 

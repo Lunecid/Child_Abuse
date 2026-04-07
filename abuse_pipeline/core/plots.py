@@ -683,3 +683,96 @@ def run_tfidf_multilogit_no_leak(
         "confusion_matrix": cm_df,
         "top_features": coef_df,
     }
+
+
+# ═══════════════════════════════════════════════════════════════
+#  로그 오즈비 + 빈도 상하 쌍 패널 차트
+# ═══════════════════════════════════════════════════════════════
+
+def plot_log_odds_with_frequency(
+    df_top: "pd.DataFrame",
+    *,
+    word_col: str = "word",
+    log_odds_col: str = "log_odds",
+    freq_col: str = "count",
+    group_col: str | None = "group",
+    color: str | None = None,
+    color_map: dict | None = None,
+    top_k: int = 15,
+    title: str = "",
+    save_path: str | None = None,
+    figsize: tuple = (10, 8),
+    lang: str = "en",
+    tt: "TokenTranslator | None" = None,
+) -> "plt.Figure":
+    """로그 오즈비와 빈도를 상하 쌍 패널로 시각화한다.
+
+    상단 패널: 로그 오즈비 (horizontal bar)
+    하단 패널: 빈도 (vertical sticks/bar)
+    두 패널은 동일한 토큰 순서(x축)를 공유한다.
+
+    Parameters
+    ----------
+    df_top : pd.DataFrame
+        word, log_odds, count (및 선택적으로 group) 컬럼을 포함하는 DataFrame.
+        이미 정렬·필터된 상위 k개를 받거나, top_k로 잘라낸다.
+    color_map : dict, optional
+        group → color 매핑.  None이면 ABUSE_COLORS 사용.
+    """
+    import pandas as pd
+
+    df = df_top.copy()
+    if len(df) > top_k:
+        df = df.head(top_k)
+
+    words = df[word_col].tolist()
+    log_odds_vals = df[log_odds_col].astype(float).tolist()
+    freq_vals = df[freq_col].astype(float).tolist()
+
+    # 토큰 번역
+    if lang == "en" and tt is not None:
+        display_words = [disp_token(w, lang, tt, mode="en_only") for w in words]
+    else:
+        display_words = words
+
+    # 색상 결정
+    if color_map is None:
+        color_map = ABUSE_COLORS
+    if group_col and group_col in df.columns:
+        colors = [color_map.get(g, color or "#1f77b4") for g in df[group_col]]
+    else:
+        colors = [color or "#1f77b4"] * len(words)
+
+    fig, (ax_lor, ax_freq) = plt.subplots(
+        2, 1,
+        sharex=True,
+        gridspec_kw={"height_ratios": [2.5, 1]},
+        figsize=figsize,
+    )
+
+    # 상단: 로그 오즈비 (horizontal bar)
+    y_pos = range(len(words))
+    ax_lor.barh(y_pos, log_odds_vals, color=colors, alpha=0.85, height=0.7)
+    ax_lor.set_yticks(y_pos)
+    ax_lor.set_yticklabels(display_words, fontsize=9)
+    ax_lor.invert_yaxis()
+    ax_lor.set_xlabel("Log-odds ratio (δ̂)")
+    ax_lor.axvline(0, color="gray", linewidth=0.8, linestyle="--")
+    if title:
+        ax_lor.set_title(title, fontsize=13)
+
+    # 하단: 빈도 (bar chart, 같은 y 위치)
+    ax_freq.barh(y_pos, freq_vals, color=colors, alpha=0.6, height=0.7)
+    ax_freq.set_yticks(y_pos)
+    ax_freq.set_yticklabels(display_words, fontsize=9)
+    ax_freq.invert_yaxis()
+    ax_freq.set_xlabel("Frequency (n)")
+
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(str(save_path), dpi=300, bbox_inches="tight")
+        print(f"[SAVE] {save_path}")
+        plt.close(fig)
+
+    return fig
