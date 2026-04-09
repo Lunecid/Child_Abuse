@@ -162,12 +162,38 @@ def run_pipeline(config: OversightConfig, args: argparse.Namespace) -> None:
         )
         save_baselines(baseline_results, output_dir)
 
-        _log("Stage 11", "Running ablation...")
+        _log("Stage 11", "Running ablation (sweep → component → method comparison)...")
         ablation_result = run_ablation(
             corpus, classifier_result, ambiguous_result,
             logodds_result, bridge_result, config
         )
         save_ablation(ablation_result, output_dir)
+
+        # Log component ablation results
+        if not ablation_result.component_table.empty:
+            _log("Stage 11", "Component ablation (Method C):")
+            for _, row in ablation_result.component_table.iterrows():
+                delta = row.get("delta_macro_f1_pp", 0)
+                delta_str = f" ({delta:+.1f} pp)" if delta != 0 else ""
+                _log("Stage 11", (
+                    f"  {row['condition']}: "
+                    f"macro-F1={row['macro_f1']:.4f}{delta_str}"
+                ))
+
+        # Log method comparison
+        if not ablation_result.method_table.empty:
+            _log("Stage 11", "Method comparison at full correction:")
+            for _, row in ablation_result.method_table.iterrows():
+                _log("Stage 11", (
+                    f"  Method {row['method']} ({row['params']}): "
+                    f"macro-F1={row['macro_f1']:.4f}"
+                ))
+
+        _log("Stage 11", (
+            f"Optimal: β_B*={ablation_result.beta_b_star}, "
+            f"β_L*={ablation_result.beta_l_star}, "
+            f"λ*={ablation_result.lambda_star}"
+        ))
         _log("Stage 11", "Done.")
     else:
         _log("Stage 11", "Skipped (--skip_evaluation)")

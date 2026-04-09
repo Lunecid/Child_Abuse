@@ -1,11 +1,14 @@
 """
-Stage 11: Baseline comparisons.
+Stage 11: External baseline comparisons.
 
-Three baselines for comparison with the corrected classifier:
+Two external baselines for comparison (different prediction strategies,
+not classifier corrections):
 
-    1. No correction baseline (= Stage 6 raw OOF output, no correction)
-    2. Keyword matching (top log-odds words → binary per class)
-    3. Single-label top-k (classify main only, predict top-2 classes)
+    1. Keyword matching (top log-odds words → binary per class)
+    2. Single-label top-k (classify main only, predict top-2 classes)
+
+Note: "No correction" is Condition 1 in the ablation table, not a separate
+baseline. See ablation.py for the 4-condition component ablation.
 """
 
 from __future__ import annotations
@@ -23,27 +26,6 @@ from oversight.models.classifier import ClassifierResult, FIVE_CLASSES
 from oversight.models.prediction import PredictionResult, _enforce_gt_anchor
 from oversight.stats.logodds import LogoddsResult
 from oversight.evaluation.metrics import evaluate_predictions
-
-
-def _baseline_no_correction(
-    classifier_result: ClassifierResult,
-    prediction_result: PredictionResult,
-) -> dict[str, Any]:
-    """Baseline 1: No correction (raw Stage 6 output)."""
-    p1 = classifier_result.oof_probs
-    if p1.size == 0:
-        return {}
-
-    y_pred = (p1 >= 0.5).astype(int)
-    y_pred = _enforce_gt_anchor(y_pred, classifier_result.gt_main_indices)
-
-    # Build a minimal PredictionResult
-    baseline_pred = PredictionResult(
-        y_pred_a=y_pred,
-        y_true=prediction_result.y_true,
-        gt_main_indices=classifier_result.gt_main_indices,
-    )
-    return evaluate_predictions(baseline_pred, method="method_a")
 
 
 def _baseline_keyword_matching(
@@ -124,12 +106,13 @@ def run_baselines(
     logodds_result: LogoddsResult,
     config: OversightConfig,
 ) -> dict[str, dict[str, Any]]:
-    """Run all three baselines and return results."""
+    """Run external baselines and return results.
+
+    Note: "No correction" is Condition 1 in the ablation table (ablation.py),
+    not a separate baseline here.
+    """
     results = {}
 
-    results["no_correction"] = _baseline_no_correction(
-        classifier_result, prediction_result
-    )
     results["keyword_matching"] = _baseline_keyword_matching(
         corpus, logodds_result, prediction_result
     )
