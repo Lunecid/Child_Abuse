@@ -1,17 +1,22 @@
 """
-Configuration for the oversight prevention pipeline.
+Configuration for the 11-stage oversight pipeline.
 
 All paths are resolved relative to the repository root (the parent of the
-`oversight/` folder), so that scripts can be run from any working directory.
+``oversight/`` folder), so that scripts can be run from any working directory.
 
-The config supports both the Korean child maltreatment data (Stage 1-10) and
+Stage overview
+--------------
+Stages 1-5 : Thin wrappers around existing ``abuse_pipeline/`` functions
+              (corpus, tokenization, log-odds, bridge words, Part 1 diagnosis).
+Stages 6-11: New code (classifier, ambiguous detection, correction,
+              prediction, evidence, evaluation).
+
+The config supports both the Korean child maltreatment data (Stages 1-10) and
 the English counsel-chat data (Stage 11, methodological generalization check
 only).
 
 IMPORTANT: Stage 11 is a methodological generalization check ONLY. It does NOT
-assert clinical utility on counsel-chat data. See PROJECT_PLAN.md Section 1.4
-and Stage 11 for the full rationale. The `active_f_beta` property and the
-assertion in `validate()` enforce this boundary at the config level.
+assert clinical utility on counsel-chat data.
 """
 
 from __future__ import annotations
@@ -34,74 +39,67 @@ def _repo_path(*parts: str) -> Path:
 class OversightConfig:
     # ---- Dataset selection ------------------------------------------------
     # "korean_abuse"         = Stage 1-10 main experiments
-    #                          (clinical utility IS claimed)
     # "english_counselchat"  = Stage 11 MGC only
-    #                          (clinical utility NOT claimed)
     dataset_name: Literal["korean_abuse", "english_counselchat"] = "korean_abuse"
 
-    # ---- Data paths (relative to repo root) -------------------------------
+    # ---- Data paths -------------------------------------------------------
+    data_dir: Path = field(
+        default_factory=lambda: _repo_path("data")
+    )
+    output_dir: Path = field(
+        default_factory=lambda: _repo_path("oversight", "outputs")
+    )
+
     # Korean paths (Stage 1-10)
     korean_dataset_path: Path = field(
         default_factory=lambda: _repo_path("data", "dataset_gt_anchored.csv")
-    )
-    korean_bridge_words_path: Path = field(
-        default_factory=lambda: _repo_path("data", "stage0_bridge_words_doclevel.csv")
-    )
-    korean_logodds_path: Path = field(
-        default_factory=lambda: _repo_path(
-            "data", "abuse_word_stats_logodds_mainOnly_childtokens.csv"
-        )
     )
 
     # English paths (Stage 11 only)
     english_dataset_path: Path = field(
         default_factory=lambda: _repo_path("english_data", "20220401_counsel_chat.csv")
     )
-    english_bridge_words_path: Path | None = None  # recomputed in Stage 11.3
-    english_logodds_path: Path | None = None  # recomputed in Stage 11.3
 
-    # Output (always under oversight/outputs/)
-    output_dir: Path = field(default_factory=lambda: _repo_path("oversight", "outputs"))
+    # ---- Stage 1: Corpus stratification -----------------------------------
+    only_negative_for_abuse: bool = True
+    include_pos_in_none: bool = True
+    include_neu_in_none: bool = True
+    sub_threshold: int = 4
 
-    # ---- Utterance splitting ----------------------------------------------
-    min_utterance_tokens: int = 3
-    max_utterance_tokens: int = 100
+    # ---- Stage 3: Log-odds ------------------------------------------------
+    logodds_alpha: float = 0.01
+    min_doc_count: int = 5
 
-    # ---- Layer 1 channels -------------------------------------------------
-    channel_a_enabled: bool = True
-    channel_b_enabled: bool = True
-    channel_c_enabled: bool = True
+    # ---- Stage 4: Bridge words --------------------------------------------
+    # None = use legacy defaults from abuse_pipeline.core.common
+    bridge_min_p1: float | None = None
+    bridge_min_p2: float | None = None
+    bridge_max_gap: float | None = None
+    bridge_count_min: int = 5
+    chi_top_k: int = 200
 
-    # Channel A: bridge words
-    bridge_stability_filter: Literal["strict", "baseline", "loose"] = "loose"
+    # ---- Stage 6: Classifier ----------------------------------------------
+    classifier_type: Literal["lr", "svm"] = "lr"
+    # TF-IDF params inherited from TFIDF_PARAMS at runtime
 
-    # Channel B: log-odds
-    logodds_top_k_per_type: int = 20
+    # ---- Stage 7: Ambiguous case detection --------------------------------
+    ambiguous_bridge_threshold: float | None = None
+    kfold_repeat_seeds: list[int] | None = None
+    bootstrap_n_iter: int | None = None
+    instability_threshold: float | None = None
 
-    # Channel C: uncertainty
-    uncertainty_top_k_per_child: int = 10
-    uncertainty_metric: Literal["entropy", "margin"] = "entropy"
+    # ---- Stage 8: Correction layers ---------------------------------------
+    # Method A (log-linear)
+    correction_lambda: float | None = None
+    # Method C (separated)
+    correction_beta_bridge: float | None = None
+    correction_beta_logodds: float | None = None
 
-    # ---- Layer 2 classifier -----------------------------------------------
-    classifier_type: Literal["tfidf_lr", "tfidf_svm"] = "tfidf_lr"
-    classifier_ngram: tuple[int, int] = (1, 2)
-    classifier_min_df: int = 3
-    classifier_max_features: int = 5000
-
-    # ---- Layer 3 aggregation ----------------------------------------------
-    aggregation_method: Literal["max", "mean", "max_plus_count"] = "max_plus_count"
-    alert_thresholds: dict[str, float] = field(
-        default_factory=lambda: {"low": 0.2, "medium": 0.4, "high": 0.6}
-    )
-
-    # ---- Evaluation -------------------------------------------------------
+    # ---- Stage 11: Evaluation ---------------------------------------------
     n_splits: int = 5
     random_state: int = 42
-    ground_truth_threshold: int = 4  # A_k >= 4 defines multi-label (Korean)
-    f_beta: float = 2.0  # recall-weighted, Korean data only
-
-    # For English counsel-chat (Stage 11), F1 is used.
-    # See PROJECT_PLAN.md Stage 11.5.
+    ground_truth_threshold: int = 4
+    f_beta: float = 2.0
     english_f_beta: float = 1.0
 
     # ---- Resolved properties ----------------------------------------------
@@ -124,8 +122,7 @@ class OversightConfig:
         """
         if self.dataset_name == "korean_abuse":
             return self.f_beta
-        else:
-            return self.english_f_beta
+        return self.english_f_beta
 
     @property
     def repo_root(self) -> Path:
@@ -145,6 +142,6 @@ class OversightConfig:
             assert self.active_f_beta == 1.0, (
                 "English counsel-chat runs must use F1 (beta=1.0), not F2. "
                 "This is enforced to prevent accidentally claiming clinical "
-                "utility on MGC data. See PROJECT_PLAN.md Stage 11.5."
+                "utility on MGC data."
             )
         self.output_dir.mkdir(parents=True, exist_ok=True)
