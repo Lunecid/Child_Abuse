@@ -1,7 +1,7 @@
 """
 inspect_no_gt_cases.py
 ======================
-GT 라벨 없음 + algo_main 존재하는 아동(~148명) 상세 조회
+GT 라벨 없음 + algo_main 존재하는 아동(ABUSE_NEG 1,503 − GT 1,350 = 153명 중 algo_main 보유 사례) 상세 조회
 
 출력 내용:
   - 아동 ID
@@ -54,7 +54,8 @@ def main():
     json_files = sorted(glob.glob(str(DATA_DIR / "*.json")))
     print(f"JSON 파일: {len(json_files)}개")
 
-    rows       = []   # CSV 용
+    rows       = []   # CSV 용 (GT 없음 + algo_main 있음)
+    rows_all_no_gt = []  # GT 없는 전체 사례 (algo_main 유무 무관)
     txt_lines  = []   # 임상 소견 전문 텍스트 파일 용
 
     for path in json_files:
@@ -84,11 +85,22 @@ def main():
         )
         algo_subs = algo_subs or []
 
-        # ── 필터: GT 없음 + algo_main 있음 ──
+        # ── GT 있으면 제외 ──
         if gt_label is not None:
-            continue          # GT 있으면 제외
+            continue
+
+        # ── 회수 집단 전체 기록 (algo_main 유무 무관) ──
+        doc_id_all = (info.get("ID") or info.get("id") or info.get("Id")
+                      or os.path.splitext(os.path.basename(path))[0])
+        rows_all_no_gt.append({
+            "doc_id": doc_id_all,
+            "algo_main": algo_main or "",
+            "has_algo_main": int(bool(algo_main)),
+        })
+
+        # ── 필터: algo_main 없으면 상세 조회 대상에서 제외 ──
         if not algo_main:
-            continue          # algo_main도 없으면 제외 (5명 케이스)
+            continue
 
         # ── 아동 ID ──
         doc_id = (info.get("ID") or info.get("id") or info.get("Id")
@@ -143,7 +155,32 @@ def main():
         txt_lines.append("")
 
     # ═══════════════════════════════════════════════════════════════════
-    #  결과 출력
+    #  회수 집단 전체 요약 (ABUSE_NEG − GT = 153명)
+    # ═══════════════════════════════════════════════════════════════════
+    n_all_no_gt = len(rows_all_no_gt)
+    print(f"\n  [회수 집단] ABUSE_NEG 중 GT 없는 전체: {n_all_no_gt}명")
+
+    if rows_all_no_gt:
+        df_all_no_gt = pd.DataFrame(rows_all_no_gt)
+        n_with_algo = int(df_all_no_gt["has_algo_main"].sum())
+        n_without_algo = n_all_no_gt - n_with_algo
+        print(f"    algo_main 있음: {n_with_algo}명 / algo_main 없음: {n_without_algo}명")
+
+        # 회수 집단 유형별 분포 (algo_main 기준)
+        algo_dist = df_all_no_gt[df_all_no_gt["algo_main"] != ""]["algo_main"].value_counts()
+        print(f"\n  [회수 집단 주 학대유형 분포 — algo_main 기준]")
+        for atype in ABUSE_ORDER:
+            cnt = algo_dist.get(atype, 0)
+            pct = cnt / n_all_no_gt if n_all_no_gt else 0
+            print(f"    {atype}: {cnt}명 ({pct:.1%})")
+
+        # CSV 저장
+        recovery_csv = OUT_DIR / "recovery_group_distribution.csv"
+        df_all_no_gt.to_csv(recovery_csv, encoding="utf-8-sig", index=False)
+        print(f"\n  회수 집단 CSV 저장: {recovery_csv}")
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  상세 결과 (GT 없음 + algo_main 있음)
     # ═══════════════════════════════════════════════════════════════════
     print(f"\n  GT 없음 + algo_main 있음: {len(rows)}명 검출")
 
