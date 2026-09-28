@@ -1,0 +1,44 @@
+{
+  "input_file": "combination_record_matrix.csv",
+  "input_sha256": "834fe4414534ab4571c4c8c56db885f13881a2c16337bba198879aedfd4b4cbd",
+  "repetitions": 9999,
+  "seed": 20260907,
+  "successful_replicates": 9999,
+  "failed_replicates": 0,
+  "resampling": "fixed-N multinomial over profile-by-recorded-type cells; whole-record bootstrap law",
+  "intervals": "2.5th and 97.5th percentiles",
+  "pairwise_p": "(1 + count(abs(delta_boot - delta_observed) >= abs(delta_observed))) / (B + 1)",
+  "adjustment": "Holm across six two-sided tests",
+  "global_test": {
+    "statistic": 675.1592539424586,
+    "df": 3,
+    "p": 5.10876353901872e-146,
+    "covariance": [
+      [
+        0.0004849580087918898,
+        -3.63298566129068e-05,
+        -4.096656894066478e-05,
+        1.012862465526296e-06
+      ],
+      [
+        -3.63298566129068e-05,
+        0.0002503229816992452,
+        -7.060827264798385e-05,
+        -3.9378589969446475e-06
+      ],
+      [
+        -4.096656894066478e-05,
+        -7.060827264798385e-05,
+        0.00025637763660485267,
+        -1.7669954823366794e-06
+      ],
+      [
+        1.012862465526296e-06,
+        -3.9378589969446475e-06,
+        -1.7669954823366794e-06,
+        0.00027389712486591134
+      ]
+    ]
+  },
+  "interpretation": "conditional on this corpus and record-level exchangeability; not population inference"
+}

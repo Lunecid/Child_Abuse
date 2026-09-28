@@ -1,0 +1,12 @@
+{
+  "source_content_sha256": "d9bbc4e5df13553d794da95f21ea02daa4a875e24191045ce122b7bf18043339",
+  "records": 3236,
+  "multidomain_records": 708,
+  "prior_counts_reproduced": true,
+  "hierarchy": "sexual > physical > neglect > emotional",
+  "uniform_tie_rule": "one of tied top types selected with equal probability",
+  "expected_matches": "sum of per-record matching probabilities",
+  "none_and_outside_top": "counted as nonmatches, not excluded",
+  "intervals": "no CI for conditional expected agreement",
+  "exports": "aggregates only"
+}

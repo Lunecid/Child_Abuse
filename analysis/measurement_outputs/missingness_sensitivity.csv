@@ -1,0 +1,11 @@
+scope,metric,numerator,denominator
+legacy_blank_as_none,RQ1,1331,1479
+legacy_blank_as_none,Neglect,277,505
+legacy_blank_as_none,Emotional abuse,582,921
+legacy_blank_as_none,Physical abuse,133,633
+legacy_blank_as_none,Sexual abuse,25,289
+observed_category_only,RQ1,1331,1479
+observed_category_only,Neglect,277,505
+observed_category_only,Emotional abuse,582,921
+observed_category_only,Physical abuse,133,633
+observed_category_only,Sexual abuse,25,289

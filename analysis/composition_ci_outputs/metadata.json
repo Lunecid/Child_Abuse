@@ -1,0 +1,7 @@
+{
+  "replicates": 9999,
+  "seed": 20260914,
+  "method": "whole-record paired multinomial bootstrap; percentile 95% CI",
+  "population_claim": false,
+  "all_denominators_positive": true
+}

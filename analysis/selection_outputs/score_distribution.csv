@@ -1,0 +1,89 @@
+scope,domain,score,total,same_type,not_same
+all_records,Neglect,0,2723,1,2722
+all_records,Neglect,1,0,0,0
+all_records,Neglect,2,2,0,2
+all_records,Neglect,3,6,1,5
+all_records,Neglect,4,1,0,1
+all_records,Neglect,5,2,1,1
+all_records,Neglect,6,287,91,196
+all_records,Neglect,7,2,2,0
+all_records,Neglect,8,210,131,79
+all_records,Neglect,9,0,0,0
+all_records,Neglect,10,3,3,0
+all_records,Emotional abuse,0,2279,3,2276
+all_records,Emotional abuse,1,0,0,0
+all_records,Emotional abuse,2,0,0,0
+all_records,Emotional abuse,3,24,5,19
+all_records,Emotional abuse,4,12,3,9
+all_records,Emotional abuse,5,709,186,523
+all_records,Emotional abuse,6,6,2,4
+all_records,Emotional abuse,7,10,8,2
+all_records,Emotional abuse,8,196,143,53
+all_records,Emotional abuse,9,0,0,0
+all_records,Emotional abuse,10,0,0,0
+all_records,Physical abuse,0,2582,2,2580
+all_records,Physical abuse,1,0,0,0
+all_records,Physical abuse,2,1,0,1
+all_records,Physical abuse,3,16,3,13
+all_records,Physical abuse,4,4,1,3
+all_records,Physical abuse,5,102,52,50
+all_records,Physical abuse,6,18,9,9
+all_records,Physical abuse,7,28,24,4
+all_records,Physical abuse,8,404,341,63
+all_records,Physical abuse,9,2,2,0
+all_records,Physical abuse,10,79,72,7
+all_records,Sexual abuse,0,2947,0,2947
+all_records,Sexual abuse,1,0,0,0
+all_records,Sexual abuse,2,0,0,0
+all_records,Sexual abuse,3,0,0,0
+all_records,Sexual abuse,4,0,0,0
+all_records,Sexual abuse,5,74,53,21
+all_records,Sexual abuse,6,2,2,0
+all_records,Sexual abuse,7,3,3,0
+all_records,Sexual abuse,8,164,162,2
+all_records,Sexual abuse,9,0,0,0
+all_records,Sexual abuse,10,46,44,2
+multidomain,Neglect,0,357,0,357
+multidomain,Neglect,1,0,0,0
+multidomain,Neglect,2,1,0,1
+multidomain,Neglect,3,0,0,0
+multidomain,Neglect,4,1,0,1
+multidomain,Neglect,5,2,1,1
+multidomain,Neglect,6,206,39,167
+multidomain,Neglect,7,0,0,0
+multidomain,Neglect,8,140,61,79
+multidomain,Neglect,9,0,0,0
+multidomain,Neglect,10,1,1,0
+multidomain,Emotional abuse,0,57,1,56
+multidomain,Emotional abuse,1,0,0,0
+multidomain,Emotional abuse,2,0,0,0
+multidomain,Emotional abuse,3,1,0,1
+multidomain,Emotional abuse,4,2,0,2
+multidomain,Emotional abuse,5,529,61,468
+multidomain,Emotional abuse,6,5,1,4
+multidomain,Emotional abuse,7,5,3,2
+multidomain,Emotional abuse,8,109,58,51
+multidomain,Emotional abuse,9,0,0,0
+multidomain,Emotional abuse,10,0,0,0
+multidomain,Physical abuse,0,221,0,221
+multidomain,Physical abuse,1,0,0,0
+multidomain,Physical abuse,2,0,0,0
+multidomain,Physical abuse,3,0,0,0
+multidomain,Physical abuse,4,0,0,0
+multidomain,Physical abuse,5,69,26,43
+multidomain,Physical abuse,6,11,3,8
+multidomain,Physical abuse,7,21,17,4
+multidomain,Physical abuse,8,320,260,60
+multidomain,Physical abuse,9,2,2,0
+multidomain,Physical abuse,10,64,57,7
+multidomain,Sexual abuse,0,616,0,616
+multidomain,Sexual abuse,1,0,0,0
+multidomain,Sexual abuse,2,0,0,0
+multidomain,Sexual abuse,3,0,0,0
+multidomain,Sexual abuse,4,0,0,0
+multidomain,Sexual abuse,5,18,9,9
+multidomain,Sexual abuse,6,0,0,0
+multidomain,Sexual abuse,7,2,2,0
+multidomain,Sexual abuse,8,49,48,1
+multidomain,Sexual abuse,9,0,0,0
+multidomain,Sexual abuse,10,23,22,1

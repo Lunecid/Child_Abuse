@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env*
+.DS_Store
+.idea/
+.vscode/
+generated/
+restricted_data/
+*.zip
+*.jsonl
+*.xlsx
+*.pkl
+*.pt
+*.pth

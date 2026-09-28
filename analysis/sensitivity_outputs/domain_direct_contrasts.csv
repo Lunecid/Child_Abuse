@@ -1,0 +1,8 @@
+﻿contrast,risk_difference_percentage_points,percentile_ci_low,percentile_ci_high,bootstrap_repetitions,seed,resampling_unit,interval_method,failed_replicates
+emotional_and_neglect_minus_physical_and_sexual,44.191045,40.463349,47.795158,9999,20260808,case,percentile,0
+neglect_minus_emotional,-8.340697,-13.889760,-2.813564,9999,20260808,case,percentile,0
+neglect_minus_physical,33.840427,27.991857,39.418938,9999,20260808,case,percentile,0
+neglect_minus_sexual,46.200966,40.732103,51.596102,9999,20260808,case,percentile,0
+emotional_minus_physical,42.181124,36.994027,47.152308,9999,20260808,case,percentile,0
+emotional_minus_sexual,54.541663,49.906638,59.046479,9999,20260808,case,percentile,0
+physical_minus_sexual,12.360539,7.701133,16.993197,9999,20260808,case,percentile,0

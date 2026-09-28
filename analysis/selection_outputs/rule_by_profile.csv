@@ -1,0 +1,11 @@
+profile,n,argmax_compatible,hierarchy_matches,none
+Physical abuse+Sexual abuse,10,9,9,1
+Emotional abuse+Sexual abuse,44,42,41,2
+Emotional abuse+Physical abuse,290,260,232,13
+Emotional abuse+Physical abuse+Sexual abuse,14,11,12,0
+Neglect+Sexual abuse,16,11,11,3
+Neglect+Physical abuse,34,25,28,0
+Neglect+Emotional abuse,155,117,82,13
+Neglect+Emotional abuse+Sexual abuse,6,6,6,0
+Neglect+Emotional abuse+Physical abuse,137,113,104,4
+Neglect+Emotional abuse+Physical abuse+Sexual abuse,2,2,2,0

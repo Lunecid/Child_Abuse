@@ -1,0 +1,21 @@
+cutoff,domain,n,not_same
+3,Neglect,511,282
+3,Emotional abuse,957,610
+3,Physical abuse,653,149
+3,Sexual abuse,289,25
+4,Neglect,505,277
+4,Emotional abuse,933,591
+4,Physical abuse,637,136
+4,Sexual abuse,289,25
+5,Neglect,504,276
+5,Emotional abuse,921,582
+5,Physical abuse,633,133
+5,Sexual abuse,289,25
+6,Neglect,502,275
+6,Emotional abuse,212,59
+6,Physical abuse,531,83
+6,Sexual abuse,215,4
+7,Neglect,215,79
+7,Emotional abuse,206,55
+7,Physical abuse,513,74
+7,Sexual abuse,213,4

@@ -1,0 +1,547 @@
+{
+  "source_zip_sha256": {
+    "train": "044dfaf73d523cdc57d1a849de39d1363031537489dada70fb79cb13edd87b15",
+    "validation": "a3354f21caaf5765a6e3a7f41b4b73691664ab722f44c002979de40558ecfc7b"
+  },
+  "n": 3236,
+  "raw_category_counts": {
+    "신체학대": 506,
+    "(해당 없음)": 1886,
+    "정서학대": 350,
+    "방임": 230,
+    "성학대": 264
+  },
+  "missing_category_count": 0,
+  "raw_score_missing_count": 0,
+  "source_joint_table_verified": true,
+  "counseling_dates": {
+    "min": "2023-08-10",
+    "max": "2024-10-26",
+    "missing_or_invalid": 0,
+    "by_year": {
+      "2023": 3234,
+      "2024": 2
+    }
+  },
+  "evaluation_dates": {
+    "min": "2023-08-10",
+    "max": "2024-10-26",
+    "missing_or_invalid": 0,
+    "by_year": {
+      "2023": 3234,
+      "2024": 2
+    }
+  },
+  "agreement": {
+    "cells": [
+      1335,
+      15,
+      144,
+      1742
+    ],
+    "order": [
+      "both_positive",
+      "type_only",
+      "score_only",
+      "both_negative"
+    ],
+    "kappa": 0.9003120117550778,
+    "kappa_ci": [
+      0.8851657927387311,
+      0.9153004507857968
+    ],
+    "bootstrap_replicates": 9999,
+    "seed": 20260909,
+    "presence_agreement": {
+      "matches": 3077,
+      "n": 3236,
+      "percent": 95.08652657601978,
+      "ci_low": 94.28686411868728,
+      "ci_high": 95.77927143419731
+    },
+    "conditional_match": {
+      "matches": 1331,
+      "n": 1335,
+      "percent": 99.70037453183521,
+      "ci_low": 99.23212265596197,
+      "ci_high": 99.8834217019843
+    }
+  },
+  "ordered_models": {
+    "order": {
+      "n": 671,
+      "beta": [
+        2.0205850403645664
+      ],
+      "log_likelihood": -329.4524904609194,
+      "aic": 660.9049809218388,
+      "cv_log_loss": 0.4934457586922042,
+      "cv_accuracy": 0.7871336313959266
+    },
+    "domain": {
+      "n": 671,
+      "beta": [
+        0.15965287049179522,
+        1.7771033301483772,
+        3.9858075262504515
+      ],
+      "log_likelihood": -345.509576229028,
+      "aic": 697.019152458056,
+      "cv_log_loss": 0.518423821242112,
+      "cv_accuracy": 0.7853949329359166
+    },
+    "combined": {
+      "n": 671,
+      "beta": [
+        1.8470083952060143,
+        -0.840661656944312,
+        0.5773098224685245,
+        2.9718111761128467
+      ],
+      "log_likelihood": -274.192612157019,
+      "aic": 556.385224314038,
+      "cv_log_loss": 0.414917296796783,
+      "cv_accuracy": 0.8435171385991058
+    },
+    "coefficients": [
+      {
+        "term": "Highest-score domain vs lower",
+        "beta": 1.8470083952060143,
+        "odds_ratio": 6.340821886906734,
+        "ci_low": 4.647661854787886,
+        "ci_high": 9.723421918567404
+      },
+      {
+        "term": "Neglect vs emotional",
+        "beta": -0.840661656944312,
+        "odds_ratio": 0.4314249736417377,
+        "ci_low": 0.25530955244540127,
+        "ci_high": 0.6306406248243622
+      },
+      {
+        "term": "Physical vs emotional",
+        "beta": 0.5773098224685245,
+        "odds_ratio": 1.7812401273311396,
+        "ci_low": 1.2739547155642212,
+        "ci_high": 2.418815283562383
+      },
+      {
+        "term": "Sexual vs emotional",
+        "beta": 2.9718111761128467,
+        "odds_ratio": 19.527254884753045,
+        "ci_low": 7.36194821302904,
+        "ci_high": 95.3385720608287
+      }
+    ],
+    "bootstrap_successful": 982,
+    "bootstrap_requested": 999,
+    "bootstrap_failures": [
+      {
+        "replicate": 30,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          109,
+          121,
+          347,
+          94
+        ]
+      },
+      {
+        "replicate": 113,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          115,
+          120,
+          369,
+          67
+        ]
+      },
+      {
+        "replicate": 128,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          86,
+          132,
+          379,
+          74
+        ]
+      },
+      {
+        "replicate": 136,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          107,
+          112,
+          377,
+          75
+        ]
+      },
+      {
+        "replicate": 255,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          88,
+          129,
+          369,
+          85
+        ]
+      },
+      {
+        "replicate": 287,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          105,
+          114,
+          372,
+          80
+        ]
+      },
+      {
+        "replicate": 427,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          108,
+          102,
+          379,
+          82
+        ]
+      },
+      {
+        "replicate": 547,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          95,
+          130,
+          356,
+          90
+        ]
+      },
+      {
+        "replicate": 584,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          105,
+          104,
+          387,
+          75
+        ]
+      },
+      {
+        "replicate": 586,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          103,
+          135,
+          360,
+          73
+        ]
+      },
+      {
+        "replicate": 630,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          105,
+          123,
+          367,
+          76
+        ]
+      },
+      {
+        "replicate": 708,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          93,
+          137,
+          364,
+          77
+        ]
+      },
+      {
+        "replicate": 735,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          97,
+          111,
+          385,
+          78
+        ]
+      },
+      {
+        "replicate": 785,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          85,
+          143,
+          350,
+          93
+        ]
+      },
+      {
+        "replicate": 796,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          93,
+          113,
+          364,
+          101
+        ]
+      },
+      {
+        "replicate": 891,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          104,
+          123,
+          361,
+          83
+        ]
+      },
+      {
+        "replicate": 941,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          87,
+          110,
+          386,
+          88
+        ]
+      }
+    ],
+    "previous_numeric_bootstrap_failures": [
+      {
+        "replicate": 30,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          109,
+          121,
+          347,
+          94
+        ]
+      },
+      {
+        "replicate": 113,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          115,
+          120,
+          369,
+          67
+        ]
+      },
+      {
+        "replicate": 128,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          86,
+          132,
+          379,
+          74
+        ]
+      },
+      {
+        "replicate": 136,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          107,
+          112,
+          377,
+          75
+        ]
+      },
+      {
+        "replicate": 255,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          88,
+          129,
+          369,
+          85
+        ]
+      },
+      {
+        "replicate": 287,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          105,
+          114,
+          372,
+          80
+        ]
+      },
+      {
+        "replicate": 427,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          108,
+          102,
+          379,
+          82
+        ]
+      },
+      {
+        "replicate": 547,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          95,
+          130,
+          356,
+          90
+        ]
+      },
+      {
+        "replicate": 584,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          105,
+          104,
+          387,
+          75
+        ]
+      },
+      {
+        "replicate": 586,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          103,
+          135,
+          360,
+          73
+        ]
+      },
+      {
+        "replicate": 630,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          105,
+          123,
+          367,
+          76
+        ]
+      },
+      {
+        "replicate": 708,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          93,
+          137,
+          364,
+          77
+        ]
+      },
+      {
+        "replicate": 735,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          97,
+          111,
+          385,
+          78
+        ]
+      },
+      {
+        "replicate": 785,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          85,
+          143,
+          350,
+          93
+        ]
+      },
+      {
+        "replicate": 796,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          93,
+          113,
+          364,
+          101
+        ]
+      },
+      {
+        "replicate": 891,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          104,
+          123,
+          361,
+          83
+        ]
+      },
+      {
+        "replicate": 941,
+        "separating_direction": true,
+        "contrast_rank": 4,
+        "recorded_domain_counts": [
+          87,
+          110,
+          386,
+          88
+        ]
+      }
+    ],
+    "independent_statsmodels_check": true,
+    "seed": 20260907,
+    "all_four_alternatives": {
+      "n": 672,
+      "beta": [
+        3.298994228212152,
+        -1.5865830304472313,
+        -0.2893861220838403,
+        -0.45951992923127494
+      ],
+      "odds_ratio": [
+        27.085383502000532,
+        0.20462361118283612,
+        0.7487230510771253,
+        0.6315867790888721
+      ],
+      "ci_low": [
+        19.630938419580726,
+        0.13098506034081733,
+        0.5405791215491119,
+        0.42204789555844047
+      ],
+      "ci_high": [
+        37.370500776402054,
+        0.3196610525242991,
+        1.0370104668633786,
+        0.9451577977708935
+      ]
+    }
+  },
+  "privacy": "Aggregate outputs only; no identifiers, narrative, or row-level data."
+}

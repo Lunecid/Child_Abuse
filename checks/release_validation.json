@@ -1,0 +1,39 @@
+{
+  "statistical_functions_preserved": {
+    "cooccurrence_benchmarks.py": [
+      "masks",
+      "share_ci",
+      "composition",
+      "benchmarks",
+      "load_tables"
+    ],
+    "selection_audit.py": [
+      "read_minimal",
+      "design",
+      "likelihood",
+      "fit"
+    ],
+    "anchor_counselor_audit.py": [
+      "anchor_level",
+      "benchmark",
+      "joint_table"
+    ],
+    "reproduce_representation_audit.py": [
+      "read_joint_table",
+      "statistics",
+      "run"
+    ]
+  },
+  "aggregate_csv_comparisons": 11,
+  "synthetic_tests_passed": 8,
+  "raw_data_rerun": false,
+  "public_history_contains_previous_commits": false,
+  "dataset_release": "AI-Hub 71680; source access governed by provider",
+  "upset_stacked_bars_and_profile_order_match_manuscript": true,
+  "figure_numbers_verified_against_final_pdf": {
+    "1": "RQ2 sample comparison",
+    "2": "nonrepresentation and allocation benchmarks",
+    "3": "recorded-type stacked UpSet",
+    "4": "domain score distribution"
+  }
+}

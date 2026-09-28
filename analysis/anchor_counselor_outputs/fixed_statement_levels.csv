@@ -1,0 +1,21 @@
+﻿rule,domain,level,records
+floor,Neglect,1,292
+floor,Neglect,2,213
+ceiling,Neglect,1,290
+ceiling,Neglect,2,215
+floor,Emotional abuse,1,725
+floor,Emotional abuse,2,196
+ceiling,Emotional abuse,1,709
+ceiling,Emotional abuse,2,212
+floor,Physical abuse,1,148
+floor,Physical abuse,2,406
+floor,Physical abuse,3,79
+ceiling,Physical abuse,1,102
+ceiling,Physical abuse,2,450
+ceiling,Physical abuse,3,81
+floor,Sexual abuse,1,79
+floor,Sexual abuse,2,164
+floor,Sexual abuse,3,46
+ceiling,Sexual abuse,1,74
+ceiling,Sexual abuse,2,169
+ceiling,Sexual abuse,3,46

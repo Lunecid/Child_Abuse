@@ -1,0 +1,13 @@
+domain,component,n,cooccurring,multidomain
+Neglect,shared,228,102,102
+Neglect,score_only,277,248,248
+Neglect,type_only,2,2,0
+Emotional abuse,shared,339,123,123
+Emotional abuse,score_only,582,525,525
+Emotional abuse,type_only,11,1,1
+Physical abuse,shared,500,365,365
+Physical abuse,score_only,133,122,122
+Physical abuse,type_only,6,1,0
+Sexual abuse,shared,264,81,81
+Sexual abuse,score_only,25,11,11
+Sexual abuse,type_only,0,0,0

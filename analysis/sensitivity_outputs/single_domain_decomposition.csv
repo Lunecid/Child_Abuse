@@ -1,0 +1,5 @@
+﻿domain,total_n,single_n,single_covered_n,single_covered_percent,single_reduction_contribution_pp,multidomain_n,multidomain_covered_n,multidomain_covered_percent,multidomain_reduction_contribution_pp,total_reduced_n,total_reduction_percent
+방임,505,155,126,81.290323,5.742574,350,102,29.142857,49.108911,277,54.851485
+정서학대,921,273,216,79.120879,6.188925,648,123,18.981481,57.003257,582,63.192182
+신체학대,633,146,135,92.465753,1.737757,487,365,74.948665,19.273302,133,21.011058
+성학대,289,197,183,92.893401,4.844291,92,81,88.043478,3.806228,25,8.650519

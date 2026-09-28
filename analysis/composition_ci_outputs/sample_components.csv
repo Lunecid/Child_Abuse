@@ -1,0 +1,13 @@
+domain,component,n,multidomain,multidomain_percent
+Neglect,shared,228,102,44.73684210526316
+Neglect,score_only,277,248,89.53068592057761
+Neglect,type_only,2,0,0.0
+Emotional abuse,shared,339,123,36.283185840707965
+Emotional abuse,score_only,582,525,90.20618556701031
+Emotional abuse,type_only,11,1,9.090909090909092
+Physical abuse,shared,500,365,73.0
+Physical abuse,score_only,133,122,91.72932330827068
+Physical abuse,type_only,6,0,0.0
+Sexual abuse,shared,264,81,30.681818181818183
+Sexual abuse,score_only,25,11,44.0
+Sexual abuse,type_only,0,0,

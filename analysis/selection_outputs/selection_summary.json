@@ -1,0 +1,177 @@
+{
+  "source_content_sha256": "d9bbc4e5df13553d794da95f21ea02daa4a875e24191045ce122b7bf18043339",
+  "joint_table_sha256": "834fe4414534ab4571c4c8c56db885f13881a2c16337bba198879aedfd4b4cbd",
+  "joint_table_match": true,
+  "all_records": 3236,
+  "multidomain_records": 708,
+  "eligible_choice_records": 671,
+  "rules": {
+    "argmax_compatible_all": {
+      "matches": 596,
+      "n": 708,
+      "percent": 84.18079096045197,
+      "ci_low": 81.30925148655919,
+      "ci_high": 86.68341654402187
+    },
+    "argmax_hierarchy_tiebreak_all": {
+      "matches": 561,
+      "n": 708,
+      "percent": 79.23728813559322,
+      "ci_low": 76.09569782165477,
+      "ci_high": 82.06331987392491
+    },
+    "hierarchy_all": {
+      "matches": 527,
+      "n": 708,
+      "percent": 74.43502824858757,
+      "ci_low": 71.09589708445434,
+      "ci_high": 77.51043171426684
+    },
+    "argmax_unique": {
+      "matches": 462,
+      "n": 558,
+      "percent": 82.79569892473118,
+      "ci_low": 79.44263744714372,
+      "ci_high": 85.70029464765653
+    },
+    "argmax_tied_compatible": {
+      "matches": 134,
+      "n": 150,
+      "percent": 89.33333333333333,
+      "ci_low": 83.37537774158531,
+      "ci_high": 93.32696303479266
+    },
+    "argmax_compatible_eligible": {
+      "matches": 596,
+      "n": 671,
+      "percent": 88.82265275707898,
+      "ci_low": 86.21413968668678,
+      "ci_high": 90.98917869130135
+    },
+    "hierarchy_eligible": {
+      "matches": 527,
+      "n": 671,
+      "percent": 78.53949329359165,
+      "ci_low": 75.27527856355916,
+      "ci_high": 81.47879233619027
+    },
+    "uniform_random_tie_expected_percent": 74.59981167608287,
+    "random_among_positive_expected_percent": 43.71468926553672,
+    "none": 36,
+    "outside_positive": 1,
+    "highest_score_ties": 150
+  },
+  "models": {
+    "score": {
+      "n": 671,
+      "parameters": [
+        0.8102202390873372
+      ],
+      "se": [
+        0.05324931535461247
+      ],
+      "log_likelihood": -313.8001965424097,
+      "aic": 629.6003930848194,
+      "cv_log_loss": 0.4693616291759878,
+      "cv_accuracy": 0.7871336313959266
+    },
+    "domain": {
+      "n": 671,
+      "parameters": [
+        0.15965287049179522,
+        1.7771033301483772,
+        3.9858075262504515
+      ],
+      "se": [
+        0.1395670029052057,
+        0.12949073521161847,
+        0.5286843749564145
+      ],
+      "log_likelihood": -345.509576229028,
+      "aic": 697.019152458056,
+      "cv_log_loss": 0.518423821242112,
+      "cv_accuracy": 0.7853949329359166
+    },
+    "combined": {
+      "n": 671,
+      "parameters": [
+        0.7186900172645438,
+        -0.6675288923069097,
+        0.4804281093779373,
+        2.7831695051869882
+      ],
+      "se": [
+        0.06821759030281374,
+        0.1821793778688103,
+        0.17489099844691905,
+        0.5684442603519381
+      ],
+      "log_likelihood": -271.83797502276013,
+      "aic": 551.6759500455203,
+      "cv_log_loss": 0.41040642763090607,
+      "cv_accuracy": 0.8360655737704918,
+      "bootstrap_requested": 999,
+      "bootstrap_successful": 982,
+      "bootstrap_failed": 17,
+      "coefficients": [
+        {
+          "term": "Score (per point)",
+          "beta": 0.7186900172645438,
+          "odds_ratio": 2.0517437005972727,
+          "ci_low": 1.823882725666401,
+          "ci_high": 2.4064258183590828
+        },
+        {
+          "term": "Neglect vs emotional",
+          "beta": -0.6675288923069097,
+          "odds_ratio": 0.5129746284192122,
+          "ci_low": 0.3472526912613238,
+          "ci_high": 0.7012195943013806
+        },
+        {
+          "term": "Physical vs emotional",
+          "beta": 0.4804281093779373,
+          "odds_ratio": 1.6167664069162033,
+          "ci_low": 1.162037317078746,
+          "ci_high": 2.2069836338418463
+        },
+        {
+          "term": "Sexual vs emotional",
+          "beta": 2.7831695051869882,
+          "odds_ratio": 16.170191318071016,
+          "ci_low": 6.122247705141336,
+          "ci_high": 77.7325917520313
+        }
+      ]
+    },
+    "domain_addition_lr": {
+      "statistic": 83.92444303929915,
+      "df": 3,
+      "p": 4.415789884466642e-18
+    },
+    "all_four_alternatives": {
+      "n": 672,
+      "parameters": [
+        0.8629181213234711,
+        -0.8328082857460435,
+        0.2562122574730239,
+        1.5421358682868416
+      ],
+      "se": [
+        0.055559257629209005,
+        0.1837118106582661,
+        0.16538165282032422,
+        0.33650024311191346
+      ],
+      "log_likelihood": -287.6441067192094
+    }
+  },
+  "seed": 20260907,
+  "cv": "5-fold stratified by recorded domain; internal random folds, not official partitions",
+  "limitations": [
+    "Record exchangeability; repeated children cannot be linked.",
+    "Conditional on a positive domain being recorded; none/outside cases reported separately.",
+    "IIA and a common numerical score slope; no clinical cross-domain calibration.",
+    "Contemporaneous associations do not identify recording chronology or human decision rules."
+  ]
+}

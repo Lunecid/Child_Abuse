@@ -1,0 +1,25 @@
+\begin{table}[!htbp]
+\singlespacing\normalsize
+  \centering
+  \caption{유형별 표본의 크기, 중복도 및 동반 의심률 비교}
+  \label{tab:sample_definition}
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+\multicolumn{7}{l}{\textit{A. 표본의 크기와 중복도}} \\
+    유형 & \makecell[c]{점수 기준\\표본} & \makecell[c]{기록유형 기준\\표본} & \makecell[c]{공통 기록} & \makecell[c]{점수 기준\\표본에만} & \makecell[c]{기록유형 기준\\표본에만} & Jaccard \\
+    \midrule
+    방임 & 505 & 230 & 228 & 277 & 2 & .450 \\
+    정서학대 & 921 & 350 & 339 & 582 & 11 & .364 \\
+    신체학대 & 633 & 506 & 500 & 133 & 6 & .782 \\
+    성학대 & 289 & 264 & 264 & 25 & 0 & .913 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\par\medskip
+\textit{B. 동반 의심률: 관찰값과 두 가상 규칙의 예상값}
+\par\smallskip
+\begin{adjustbox}{max width=\textwidth}
+\input{tables/cooccurrence_panel.tex}
+\end{adjustbox}
+\end{table}

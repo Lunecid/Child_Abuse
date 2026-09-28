@@ -1,0 +1,26 @@
+{
+  "baseline_validation": {
+    "all_cases": 3236,
+    "positive_cases": 1479,
+    "multidomain_cases": 708,
+    "domain_occurrences": 2348,
+    "case_matches": 1331,
+    "domain_counts": {
+      "방임": 505,
+      "정서학대": 921,
+      "신체학대": 633,
+      "성학대": 289
+    },
+    "covered_counts": {
+      "방임": 228,
+      "정서학대": 339,
+      "신체학대": 500,
+      "성학대": 264
+    }
+  },
+  "source_counts": {
+    "training": 2876,
+    "validation": 360
+  },
+  "privacy": "Aggregate outputs only; no identifiers, narratives, or utterances written."
+}

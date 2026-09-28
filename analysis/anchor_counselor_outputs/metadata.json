@@ -1,0 +1,64 @@
+{
+  "corpus_sha256_of_file_hashes": "d9bbc4e5df13553d794da95f21ea02daa4a875e24191045ce122b7bf18043339",
+  "frozen_table_match": true,
+  "records": 3236,
+  "duplicate_record_ids": 0,
+  "blank_record_ids": 0,
+  "bootstrap_replicates": 9999,
+  "seed": 20260928,
+  "cluster_seed": 20260929,
+  "anchors": {
+    "Neglect": [
+      6,
+      8
+    ],
+    "Emotional abuse": [
+      5,
+      8
+    ],
+    "Physical abuse": [
+      5,
+      8,
+      10
+    ],
+    "Sexual abuse": [
+      5,
+      8,
+      10
+    ]
+  },
+  "anchor_rules": {
+    "floor": "highest fixed statement at or below the score; criterion-meeting values below the lowest statement take level 1",
+    "ceiling": "lowest fixed statement at or above the score; values above the top statement take the top level"
+  },
+  "counselor_field": {
+    "records": 3236,
+    "blank": 0,
+    "distinct": 1,
+    "records_per_counselor": {
+      "min": 3236,
+      "q1": 3236.0,
+      "median": 3236.0,
+      "q3": 3236.0,
+      "max": 3236
+    },
+    "counselors_with_criterion_meeting_records": 1,
+    "largest_counselor_share_percent": 100.0,
+    "matches_public_credential_label": true,
+    "code_length": {
+      "min": 8,
+      "max": 8
+    }
+  },
+  "type_classification_field": {
+    "distinct_values": 5,
+    "blank": 0,
+    "max_length": 7,
+    "exported_as_categories": true
+  },
+  "python": "3.11.5",
+  "numpy": "1.26.1",
+  "pandas": "2.1.1",
+  "runtime_seconds": 0.5,
+  "exports": "aggregates only; no identifiers, counselor codes, or per-record values"
+}

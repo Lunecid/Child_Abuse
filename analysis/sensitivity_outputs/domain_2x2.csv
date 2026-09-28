@@ -1,0 +1,5 @@
+﻿domain,score_positive_and_same_recorded_n,score_positive_and_not_same_recorded_n,score_negative_and_same_recorded_n,score_negative_and_not_same_recorded_n,score_defined_n,single_type_defined_n,jaccard
+방임,228,277,2,2729,505,230,0.449704
+정서학대,339,582,11,2304,921,350,0.363734
+신체학대,500,133,6,2597,633,506,0.782473
+성학대,264,25,0,2947,289,264,0.913495

@@ -1,0 +1,9 @@
+﻿rule,domain,multidomain_n,unique_top,tied_top,below_top
+floor,Neglect,350,70,135,145
+floor,Emotional abuse,648,40,180,428
+floor,Physical abuse,487,296,162,29
+floor,Sexual abuse,92,53,37,2
+ceiling,Neglect,350,63,133,154
+ceiling,Emotional abuse,648,41,164,443
+ceiling,Physical abuse,487,318,146,23
+ceiling,Sexual abuse,92,54,34,4

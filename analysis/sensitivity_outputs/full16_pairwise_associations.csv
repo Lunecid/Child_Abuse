@@ -1,0 +1,7 @@
+﻿pair,conditional_or,percentile_ci_low,percentile_ci_high,requested_repetitions,successful_replicates,failed_replicates,seed,resampling,interval_method
+방임+정서학대,4.648003,3.682752,5.887914,4999,4999,0,20260809,multinomial_case_profile_resampling_across_all_16_profiles,percentile
+방임+신체학대,1.158619,0.895713,1.501097,4999,4999,0,20260809,multinomial_case_profile_resampling_across_all_16_profiles,percentile
+방임+성학대,0.506516,0.300614,0.768887,4999,4999,0,20260809,multinomial_case_profile_resampling_across_all_16_profiles,percentile
+정서학대+신체학대,10.008108,8.177978,12.426262,4999,4999,0,20260809,multinomial_case_profile_resampling_across_all_16_profiles,percentile
+정서학대+성학대,1.121518,0.785514,1.550826,4999,4999,0,20260809,multinomial_case_profile_resampling_across_all_16_profiles,percentile
+신체학대+성학대,0.389180,0.230542,0.597776,4999,4999,0,20260809,multinomial_case_profile_resampling_across_all_16_profiles,percentile

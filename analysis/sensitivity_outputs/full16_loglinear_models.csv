@@ -1,0 +1,3 @@
+﻿analysis_population,model,deviance,df,parametric_bootstrap_p,requested_repetitions,successful_replicates,failed_replicates,seed,simulation,p_value_formula
+all_3236_cases_all_16_profiles,independence,930.669487,11,0.000200,4999,4999,0,20260809,fixed_total_multinomial_from_fitted_profile_probabilities,(1 + count[simulated_deviance >= observed]) / (1 + successful_replicates)
+all_3236_cases_all_16_profiles,all_pairwise,26.960259,5,0.000200,4999,4999,0,20260809,fixed_total_multinomial_from_fitted_profile_probabilities,(1 + count[simulated_deviance >= observed]) / (1 + successful_replicates)

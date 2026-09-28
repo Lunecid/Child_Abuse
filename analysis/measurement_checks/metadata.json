@@ -1,0 +1,12 @@
+{
+  "source_content_sha256": "d9bbc4e5df13553d794da95f21ea02daa4a875e24191045ce122b7bf18043339",
+  "archived_three_joint_tables_match": true,
+  "existing_point_estimates_reproduced": true,
+  "replicates": 9999,
+  "seed": 20260914,
+  "bootstrap": "paired whole-record multinomial; percentile 95% CI",
+  "cutoff_intervals": "80 joint cells for each cutoff vector; archived draws reproduced for baseline/common cutoffs",
+  "restriction_intervals": "original 80 baseline cells and archived seed",
+  "expected_rates": "ratios of probability-weighted expected frequencies; not mean simulated ratios",
+  "exports": "anonymous aggregates only"
+}

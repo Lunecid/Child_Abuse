@@ -1,0 +1,9 @@
+﻿partition,domain,score_positive_n,same_type_n,not_same_type_n,not_same_type_percent,percentile_ci_low,percentile_ci_high,single_type_n,jaccard,bootstrap_repetitions,seed,resampling_unit
+train,방임,451,203,248,54.988914,50.370012,59.535668,205,0.448124,9999,20260810,case_within_partition
+train,정서학대,820,302,518,63.170732,59.871121,66.464928,310,0.364734,9999,20260810,case_within_partition
+train,신체학대,561,444,117,20.855615,17.550103,24.295939,450,0.783069,9999,20260810,case_within_partition
+train,성학대,251,228,23,9.163347,5.737705,12.916766,228,0.908367,9999,20260810,case_within_partition
+validation,방임,54,25,29,53.703704,40.384615,67.213115,25,0.462963,9999,20260810,case_within_partition
+validation,정서학대,101,37,64,63.366337,53.763441,72.727273,40,0.355769,9999,20260810,case_within_partition
+validation,신체학대,72,56,16,22.222222,12.857143,32.052492,56,0.777778,9999,20260810,case_within_partition
+validation,성학대,38,36,2,5.263158,0.000000,13.513514,36,0.947368,9999,20260810,case_within_partition

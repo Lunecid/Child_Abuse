@@ -1,0 +1,5 @@
+domain,score_only,another_criterion_meeting_type,recorded|Neglect,recorded|Emotional abuse,recorded|Physical abuse,recorded|Sexual abuse,recorded|None
+Neglect,277,227,0,77,132,19,49
+Emotional abuse,582,493,97,0,337,61,87
+Physical abuse,133,104,19,62,0,23,29
+Sexual abuse,25,4,1,3,2,0,19

@@ -1,0 +1,5 @@
+type,n,cooccurring,meets|Neglect,meets|Emotional abuse,meets|Physical abuse,meets|Sexual abuse
+Neglect,230,104,228,97,19,1
+Emotional abuse,350,124,77,339,62,3
+Physical abuse,506,366,132,337,500,2
+Sexual abuse,264,81,19,61,23,264

@@ -1,0 +1,4 @@
+﻿rule,multidomain_records,recorded_type_among_top,percent,records_with_tied_top
+numeric,708,596,84.18079096045197,150
+floor,708,623,87.99435028248588,249
+ceiling,708,622,87.85310734463278,232

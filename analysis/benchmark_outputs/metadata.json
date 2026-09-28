@@ -1,0 +1,16 @@
+{
+  "replicates": 9999,
+  "seed": 20260914,
+  "method": "whole-record paired multinomial bootstrap of the 16x5 joint table; percentile 95% CI",
+  "indicator": "at least one criterion-meeting domain other than the index domain",
+  "archived_multidomain_contrasts_reproduced": true,
+  "benchmark_rule": "multidomain records reallocated; records with 0-1 criterion-meeting domains keep observed types",
+  "inputs": [
+    "composition_ci_outputs/joint_counts.csv",
+    "anchor_counselor_outputs/highest_rank_benchmarks.csv",
+    "contract_outputs/uniform_choice.csv",
+    "anchor_counselor_outputs/stage_any_concern_agreement.csv",
+    "anchor_counselor_outputs/definition_characteristics.csv"
+  ],
+  "population_claim": false
+}
